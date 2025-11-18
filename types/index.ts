@@ -40,5 +40,24 @@ export type POICategory =
   | 'entertainment';
 
 export type SortOption = 'nearest' | 'name' | 'rating';
-export type FilterOption = 'open-now' | 'all';
+export type FilterOption = 'all' | 'free' | 'paid';
+
+export interface Event {
+  id: string;
+  name: string;
+  shortName?: string;
+  description: string;
+  shortDescription?: string;
+  location: Location;
+  locationName: string;
+  locationAddress: string;
+  categories: string[];
+  startDate: string;
+  endDate: string;
+  isFree: boolean;
+  imageUrl?: string;
+  website?: string;
+  email?: string;
+  telephone?: string;
+}
 

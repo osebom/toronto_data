@@ -1,15 +1,25 @@
 import { create } from 'zustand';
-import { Brand, POI, SortOption, FilterOption, POICategory } from '@/types';
+import { Brand, POI, Event, SortOption, FilterOption, POICategory, Location } from '@/types';
 import { dummyBrands, dummyPOIs } from '@/lib/dummy-data';
+import { parseEvents } from '@/lib/parse-events';
+import { sampleApiEvents } from '@/lib/sample-events';
+import { calculateDistanceMiles } from '@/lib/utils';
+import { TORONTO_CENTER_LOCATION } from '@/lib/dummy-data';
 
 interface AppState {
   // View mode
   isMobile: boolean;
   setIsMobile: (isMobile: boolean) => void;
   
+  // User location
+  userLocation: Location | null;
+  setUserLocation: (location: Location | null) => void;
+  
   // Data
   brands: Brand[];
   pois: POI[];
+  events: Event[];
+  setEvents: (events: Event[]) => void;
   
   // Filters
   selectedFilter: FilterOption;
@@ -31,17 +41,26 @@ interface AppState {
   selectedPOI: POI | null;
   setSelectedPOI: (poi: POI | null) => void;
   
+  selectedEvent: Event | null;
+  setSelectedEvent: (event: Event | null) => void;
+  
   // Filtered data
   filteredBrands: () => Brand[];
   filteredPOIs: () => POI[];
+  filteredEvents: () => Event[];
 }
 
 export const useStore = create<AppState>((set, get) => ({
   isMobile: false,
   setIsMobile: (isMobile) => set({ isMobile }),
   
+  userLocation: null,
+  setUserLocation: (location) => set({ userLocation: location }),
+  
   brands: dummyBrands,
   pois: dummyPOIs,
+  events: parseEvents(sampleApiEvents),
+  setEvents: (events) => set({ events }),
   
   selectedFilter: 'all',
   setSelectedFilter: (filter) => set({ selectedFilter: filter }),
@@ -60,6 +79,9 @@ export const useStore = create<AppState>((set, get) => ({
   
   selectedPOI: null,
   setSelectedPOI: (poi) => set({ selectedPOI: poi }),
+  
+  selectedEvent: null,
+  setSelectedEvent: (event) => set({ selectedEvent: event }),
   
   filteredBrands: () => {
     const { brands, selectedFilter, searchQuery, selectedSort } = get();
@@ -102,6 +124,47 @@ export const useStore = create<AppState>((set, get) => ({
         poi.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         poi.description.toLowerCase().includes(searchQuery.toLowerCase())
       );
+    }
+    
+    return filtered;
+  },
+  
+  filteredEvents: () => {
+    const { events, searchQuery, selectedFilter, selectedSort } = get();
+    let filtered = [...events];
+    
+    // Filter by free/paid status
+    if (selectedFilter === 'free') {
+      filtered = filtered.filter(event => event.isFree);
+    } else if (selectedFilter === 'paid') {
+      filtered = filtered.filter(event => !event.isFree);
+    }
+    
+    // Filter by search query
+    if (searchQuery) {
+      filtered = filtered.filter(event =>
+        event.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        event.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        event.locationName.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+    
+    // Sort events
+    if (selectedSort === 'nearest') {
+      // Use user's location if available, otherwise fall back to Toronto center
+      const { userLocation } = get();
+      const referenceLocation: Location = userLocation || TORONTO_CENTER_LOCATION;
+      
+      // Calculate distance for each event and sort
+      filtered = filtered
+        .map(event => ({
+          event,
+          distance: calculateDistanceMiles(referenceLocation, event.location)
+        }))
+        .sort((a, b) => a.distance - b.distance)
+        .map(item => item.event);
+    } else if (selectedSort === 'name') {
+      filtered.sort((a, b) => a.name.localeCompare(b.name));
     }
     
     return filtered;

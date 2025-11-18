@@ -3,12 +3,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { useStore } from '@/store/useStore';
 import { TORONTO_CENTER_LOCATION } from '@/lib/dummy-data';
-import { Brand, POI } from '@/types';
+import { Brand, POI, Event } from '@/types';
 
 // CSS will be imported dynamically
 
 interface MapViewProps {
-  mode: 'brands' | 'pois';
+  mode: 'brands' | 'pois' | 'events';
 }
 
 export default function MapView({ mode }: MapViewProps) {
@@ -18,7 +18,7 @@ export default function MapView({ mode }: MapViewProps) {
   const markersRef = useRef<any[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
   
-  const { filteredBrands, filteredPOIs, isMobile, searchQuery, selectedFilter, selectedCategory } = useStore();
+  const { filteredBrands, filteredPOIs, filteredEvents, isMobile, searchQuery, selectedFilter, selectedCategory, selectedEvent } = useStore();
 
   useEffect(() => {
     if (typeof window === 'undefined' || !mapContainer.current || map.current) return;
@@ -97,20 +97,33 @@ export default function MapView({ mode }: MapViewProps) {
 
     const filteredBrandsData = filteredBrands();
     const filteredPOIsData = filteredPOIs();
+    const filteredEventsData = filteredEvents();
 
     if (mode === 'brands') {
       filteredBrandsData.forEach((brand) => {
         const marker = createBrandMarker(brand);
         if (marker) markersRef.current.push(marker);
       });
-    } else {
+    } else if (mode === 'pois') {
       filteredPOIsData.forEach((poi) => {
         const marker = createPOIMarker(poi);
         if (marker) markersRef.current.push(marker);
       });
+    } else if (mode === 'events') {
+      filteredEventsData.forEach((event) => {
+        const marker = createEventMarker(event);
+        if (marker) {
+          markersRef.current.push(marker);
+          // If this event is selected, open its popup
+          if (selectedEvent?.id === event.id) {
+            marker.openPopup();
+            map.current?.setView([event.location.lat, event.location.lng], 15);
+          }
+        }
+      });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoaded, mode, searchQuery, selectedFilter, selectedCategory]);
+  }, [isLoaded, mode, searchQuery, selectedFilter, selectedCategory, selectedEvent]);
 
   // Resize map when container size changes
   useEffect(() => {
@@ -241,6 +254,91 @@ export default function MapView({ mode }: MapViewProps) {
 
     return Leaflet.marker([poi.location.lat, poi.location.lng], { icon })
       .addTo(map.current);
+  };
+
+  const createEventMarker = (event: Event): any => {
+    if (!map.current || !leafletRef.current || typeof window === 'undefined') return null;
+    
+    const Leaflet = leafletRef.current;
+
+    const el = document.createElement('div');
+    el.className = 'event-marker';
+    el.style.width = '50px';
+    el.style.height = '50px';
+    el.style.borderRadius = '50%';
+    el.style.backgroundColor = event.isFree ? '#10b981' : '#3b82f6'; // Green for free, blue for paid
+    el.style.border = '3px solid #ffffff';
+    el.style.display = 'flex';
+    el.style.alignItems = 'center';
+    el.style.justifyContent = 'center';
+    el.style.cursor = 'pointer';
+    el.style.fontSize = '20px';
+    el.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)';
+    el.style.position = 'relative';
+    el.style.zIndex = '1000';
+    el.style.fontWeight = 'bold';
+    el.style.color = '#ffffff';
+
+    // Use calendar/event icon
+    el.textContent = '📅';
+
+    // Add label with event name
+    const label = document.createElement('div');
+    label.style.position = 'absolute';
+    label.style.top = '-35px';
+    label.style.left = '50%';
+    label.style.transform = 'translateX(-50%)';
+    label.style.backgroundColor = 'rgba(0,0,0,0.9)';
+    label.style.color = '#ffffff';
+    label.style.padding = '6px 10px';
+    label.style.borderRadius = '6px';
+    label.style.fontSize = '12px';
+    label.style.whiteSpace = 'nowrap';
+    label.style.pointerEvents = 'none';
+    label.style.maxWidth = '200px';
+    label.style.textAlign = 'center';
+    label.style.fontWeight = '500';
+    label.textContent = event.name;
+    el.appendChild(label);
+
+    // Add free/paid badge
+    const badge = document.createElement('div');
+    badge.style.position = 'absolute';
+    badge.style.bottom = '-20px';
+    badge.style.left = '50%';
+    badge.style.transform = 'translateX(-50%)';
+    badge.style.backgroundColor = event.isFree ? '#10b981' : '#3b82f6';
+    badge.style.color = '#ffffff';
+    badge.style.padding = '2px 6px';
+    badge.style.borderRadius = '4px';
+    badge.style.fontSize = '9px';
+    badge.style.fontWeight = 'bold';
+    badge.style.whiteSpace = 'nowrap';
+    badge.textContent = event.isFree ? 'FREE' : 'PAID';
+    el.appendChild(badge);
+
+    const icon = Leaflet.divIcon({
+      html: el.outerHTML,
+      className: 'custom-event-marker',
+      iconSize: [50, 75], // Height includes the label and badge
+      iconAnchor: [25, 75],
+    });
+
+    const marker = Leaflet.marker([event.location.lat, event.location.lng], { icon })
+      .addTo(map.current);
+
+    // Add popup on click
+    const popupContent = `
+      <div style="min-width: 200px;">
+        <h3 style="margin: 0 0 8px 0; font-weight: bold; font-size: 16px;">${event.name}</h3>
+        <p style="margin: 0 0 8px 0; color: #666; font-size: 13px;">${event.locationName}</p>
+        <p style="margin: 0 0 8px 0; font-size: 13px;">${event.shortDescription || event.description.substring(0, 100)}...</p>
+        ${event.website ? `<a href="${event.website}" target="_blank" style="color: #3b82f6; text-decoration: none; font-size: 12px;">Learn more →</a>` : ''}
+      </div>
+    `;
+    marker.bindPopup(popupContent);
+
+    return marker;
   };
 
   return (

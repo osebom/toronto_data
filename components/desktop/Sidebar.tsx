@@ -1,9 +1,8 @@
 'use client';
 
-import { FiArrowLeft, FiInfo, FiSearch, FiChevronDown, FiFilter, FiClock } from 'react-icons/fi';
+import { FiInfo, FiSearch, FiChevronDown, FiFilter } from 'react-icons/fi';
 import { useStore } from '@/store/useStore';
-import BrandList from './BrandList';
-import { formatDistance } from '@/lib/utils';
+import EventList from './EventList';
 
 export default function Sidebar() {
   const {
@@ -19,16 +18,11 @@ export default function Sidebar() {
     <div className="w-full lg:w-1/3 bg-dark-sidebar h-screen flex flex-col overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-gray-700">
-        <div className="flex items-center gap-3">
-          <button className="text-white hover:text-gray-300">
-            <FiArrowLeft size={20} />
-          </button>
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-white rounded flex items-center justify-center">
-              <span className="text-dark-bg font-bold text-sm">A</span>
-            </div>
-            <span className="text-white font-semibold">outletbuddy</span>
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 bg-white rounded flex items-center justify-center">
+            <span className="text-dark-bg font-bold text-sm">E</span>
           </div>
+          <span className="text-white font-semibold">event buddy</span>
         </div>
         <button className="text-white hover:text-gray-300">
           <FiInfo size={20} />
@@ -53,15 +47,38 @@ export default function Sidebar() {
       <div className="p-4 border-b border-gray-700 space-y-3">
         <div className="flex items-center gap-2">
           <span className="text-gray-400 text-sm">Show me:</span>
-          <button
-            onClick={() => setSelectedFilter(selectedFilter === 'open-now' ? 'all' : 'open-now')}
-            className="flex items-center gap-2 bg-dark-card text-white px-3 py-1.5 rounded-lg hover:bg-gray-600 transition-colors"
-          >
-            <span className="text-sm">
-              {selectedFilter === 'open-now' ? 'Open Now' : 'All'}
-            </span>
-            <FiChevronDown size={16} />
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setSelectedFilter('all')}
+              className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                selectedFilter === 'all'
+                  ? 'bg-green-500 text-white'
+                  : 'bg-dark-card text-white hover:bg-gray-600'
+              }`}
+            >
+              All
+            </button>
+            <button
+              onClick={() => setSelectedFilter('free')}
+              className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                selectedFilter === 'free'
+                  ? 'bg-green-500 text-white'
+                  : 'bg-dark-card text-white hover:bg-gray-600'
+              }`}
+            >
+              Free
+            </button>
+            <button
+              onClick={() => setSelectedFilter('paid')}
+              className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                selectedFilter === 'paid'
+                  ? 'bg-green-500 text-white'
+                  : 'bg-dark-card text-white hover:bg-gray-600'
+              }`}
+            >
+              Paid
+            </button>
+          </div>
         </div>
 
         <div className="flex items-center gap-2">
@@ -86,9 +103,9 @@ export default function Sidebar() {
         </button>
       </div>
 
-      {/* Brand List */}
+      {/* Event List */}
       <div className="flex-1 overflow-y-auto">
-        <BrandList />
+        <EventList />
       </div>
     </div>
   );

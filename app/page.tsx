@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { useStore } from '@/store/useStore';
 import { useResponsive } from '@/hooks/useResponsive';
+import { useGeolocation } from '@/hooks/useGeolocation';
 import Sidebar from '@/components/desktop/Sidebar';
 import MapView from '@/components/map/MapView';
 import BottomFilters from '@/components/mobile/BottomFilters';
@@ -12,9 +13,10 @@ import MapControls from '@/components/mobile/MapControls';
 export default function Home() {
   const { isMobile } = useStore();
   useResponsive();
+  useGeolocation(); // Get user's location
 
   // Determine which mode to show based on mobile/desktop
-  const mapMode = isMobile ? 'pois' : 'brands';
+  const mapMode = 'events'; // Show events on both mobile and desktop
 
   return (
     <main className="h-screen w-screen overflow-hidden">
