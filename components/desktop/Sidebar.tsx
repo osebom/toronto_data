@@ -1,8 +1,10 @@
 'use client';
 
+import { useMemo } from 'react';
 import { FiInfo, FiSearch, FiChevronDown, FiFilter } from 'react-icons/fi';
 import { useStore } from '@/store/useStore';
 import EventList from './EventList';
+import { getThemeIcon } from '@/lib/event-metadata';
 
 export default function Sidebar() {
   const {
@@ -12,7 +14,18 @@ export default function Sidebar() {
     setSelectedFilter,
     selectedSort,
     setSelectedSort,
+    events,
+    selectedTheme,
+    setSelectedTheme,
   } = useStore();
+
+  const themeOptions = useMemo(() => {
+    const set = new Set<string>();
+    events.forEach((event) => {
+      event.themes?.forEach((theme) => set.add(theme));
+    });
+    return Array.from(set).sort();
+  }, [events]);
 
   return (
     <div className="w-full lg:w-1/3 bg-dark-sidebar h-screen flex flex-col overflow-hidden">
@@ -78,8 +91,54 @@ export default function Sidebar() {
             >
               Paid
             </button>
+            <button
+              onClick={() => setSelectedFilter('accessible')}
+              className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                selectedFilter === 'accessible'
+                  ? 'bg-green-500 text-white'
+                  : 'bg-dark-card text-white hover:bg-gray-600'
+              }`}
+            >
+              Accessible
+            </button>
           </div>
         </div>
+
+        {themeOptions.length > 0 && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-gray-400 text-sm">Themes:</span>
+              <button
+                onClick={() => setSelectedTheme(null)}
+                className={`text-xs ${
+                  selectedTheme === null
+                    ? 'text-green-400'
+                    : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                Clear
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {themeOptions.map((theme) => (
+                <button
+                  key={theme}
+                  onClick={() =>
+                    setSelectedTheme(selectedTheme === theme ? null : theme)
+                  }
+                  className={`px-3 py-1 rounded-full text-xs flex items-center gap-1 transition-colors ${
+                    selectedTheme === theme
+                      ? 'bg-emerald-500 text-white'
+                      : 'bg-dark-card text-gray-200 hover:bg-gray-600'
+                  }`}
+                >
+                  <span>{getThemeIcon(theme)}</span>
+                  {theme}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="flex items-center gap-2">
           <span className="text-gray-400 text-sm">Sort by:</span>
@@ -110,4 +169,3 @@ export default function Sidebar() {
     </div>
   );
 }
-

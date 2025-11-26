@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useStore } from '@/store/useStore';
 import { TORONTO_CENTER_LOCATION } from '@/lib/dummy-data';
 import { Brand, POI, Event } from '@/types';
+import { getEventEmoji } from '@/lib/event-icons';
 
 // CSS will be imported dynamically
 
@@ -240,7 +241,12 @@ export default function MapView({ mode }: MapViewProps) {
     label.style.padding = '4px 8px';
     label.style.borderRadius = '4px';
     label.style.fontSize = '11px';
-    label.style.whiteSpace = 'nowrap';
+    label.style.whiteSpace = 'normal';
+    label.style.wordBreak = 'break-word';
+    label.style.maxWidth = '140px';
+    label.style.maxHeight = '36px';
+    label.style.overflow = 'hidden';
+    label.style.textOverflow = 'ellipsis';
     label.style.pointerEvents = 'none';
     label.textContent = poi.name;
     el.appendChild(label);
@@ -279,48 +285,18 @@ export default function MapView({ mode }: MapViewProps) {
     el.style.fontWeight = 'bold';
     el.style.color = '#ffffff';
 
-    // Use calendar/event icon
-    el.textContent = '📅';
+    const eventEmoji = getEventEmoji(event.categories);
+    el.textContent = eventEmoji;
 
     // Add label with event name
     const label = document.createElement('div');
-    label.style.position = 'absolute';
-    label.style.top = '-35px';
-    label.style.left = '50%';
-    label.style.transform = 'translateX(-50%)';
-    label.style.backgroundColor = 'rgba(0,0,0,0.9)';
-    label.style.color = '#ffffff';
-    label.style.padding = '6px 10px';
-    label.style.borderRadius = '6px';
-    label.style.fontSize = '12px';
-    label.style.whiteSpace = 'nowrap';
-    label.style.pointerEvents = 'none';
-    label.style.maxWidth = '200px';
-    label.style.textAlign = 'center';
-    label.style.fontWeight = '500';
-    label.textContent = event.name;
+    label.style.display = 'none';
     el.appendChild(label);
-
-    // Add free/paid badge
-    const badge = document.createElement('div');
-    badge.style.position = 'absolute';
-    badge.style.bottom = '-20px';
-    badge.style.left = '50%';
-    badge.style.transform = 'translateX(-50%)';
-    badge.style.backgroundColor = event.isFree ? '#10b981' : '#3b82f6';
-    badge.style.color = '#ffffff';
-    badge.style.padding = '2px 6px';
-    badge.style.borderRadius = '4px';
-    badge.style.fontSize = '9px';
-    badge.style.fontWeight = 'bold';
-    badge.style.whiteSpace = 'nowrap';
-    badge.textContent = event.isFree ? 'FREE' : 'PAID';
-    el.appendChild(badge);
 
     const icon = Leaflet.divIcon({
       html: el.outerHTML,
       className: 'custom-event-marker',
-      iconSize: [50, 75], // Height includes the label and badge
+      iconSize: [50, 75],
       iconAnchor: [25, 75],
     });
 

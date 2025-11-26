@@ -30,6 +30,9 @@ interface AppState {
   
   selectedCategory: POICategory | null;
   setSelectedCategory: (category: POICategory | null) => void;
+
+  selectedTheme: string | null;
+  setSelectedTheme: (theme: string | null) => void;
   
   searchQuery: string;
   setSearchQuery: (query: string) => void;
@@ -70,6 +73,9 @@ export const useStore = create<AppState>((set, get) => ({
   
   selectedCategory: null,
   setSelectedCategory: (category) => set({ selectedCategory: category }),
+
+  selectedTheme: null,
+  setSelectedTheme: (theme) => set({ selectedTheme: theme }),
   
   searchQuery: '',
   setSearchQuery: (query) => set({ searchQuery: query }),
@@ -130,7 +136,7 @@ export const useStore = create<AppState>((set, get) => ({
   },
   
   filteredEvents: () => {
-    const { events, searchQuery, selectedFilter, selectedSort } = get();
+    const { events, searchQuery, selectedFilter, selectedSort, selectedTheme } = get();
     let filtered = [...events];
     
     // Filter by free/paid status
@@ -138,6 +144,12 @@ export const useStore = create<AppState>((set, get) => ({
       filtered = filtered.filter(event => event.isFree);
     } else if (selectedFilter === 'paid') {
       filtered = filtered.filter(event => !event.isFree);
+    } else if (selectedFilter === 'accessible') {
+      filtered = filtered.filter((event) => event.isAccessible);
+    }
+
+    if (selectedTheme) {
+      filtered = filtered.filter((event) => event.themes.includes(selectedTheme));
     }
     
     // Filter by search query
@@ -170,4 +182,3 @@ export const useStore = create<AppState>((set, get) => ({
     return filtered;
   },
 }));
-

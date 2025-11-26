@@ -40,7 +40,12 @@ export type POICategory =
   | 'entertainment';
 
 export type SortOption = 'nearest' | 'name' | 'rating';
-export type FilterOption = 'all' | 'free' | 'paid' | 'open-now';
+export type FilterOption = 'all' | 'free' | 'paid' | 'open-now' | 'accessible';
+
+export interface EventPartnership {
+  role: string;
+  name: string;
+}
 
 export interface Event {
   id: string;
@@ -59,5 +64,12 @@ export interface Event {
   website?: string;
   email?: string;
   telephone?: string;
+  features: string[];
+  partnerships: EventPartnership[];
+  isAccessible: boolean;
+  reservationsRequired: boolean;
+  price?: string | null;
+  priceLow?: number | null;
+  priceHigh?: number | null;
+  themes: string[];
 }
-

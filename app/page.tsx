@@ -9,11 +9,27 @@ import MapView from '@/components/map/MapView';
 import BottomFilters from '@/components/mobile/BottomFilters';
 import SearchBar from '@/components/mobile/SearchBar';
 import MapControls from '@/components/mobile/MapControls';
+import { fetchTorontoEvents } from '@/lib/fetch-events';
 
 export default function Home() {
-  const { isMobile } = useStore();
+  const { isMobile, setEvents } = useStore();
   useResponsive();
   useGeolocation(); // Get user's location
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    fetchTorontoEvents(controller.signal)
+      .then((events) => setEvents(events))
+      .catch((error) => {
+        if ((error as Error).name === 'AbortError') {
+          return;
+        }
+        console.error('Failed to load events:', error);
+      });
+
+    return () => controller.abort();
+  }, [setEvents]);
 
   // Determine which mode to show based on mobile/desktop
   const mapMode = 'events'; // Show events on both mobile and desktop
@@ -40,4 +56,3 @@ export default function Home() {
     </main>
   );
 }
-
