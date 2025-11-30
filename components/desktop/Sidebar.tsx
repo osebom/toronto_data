@@ -272,6 +272,7 @@ export default function Sidebar() {
       <div className="flex items-center justify-between p-4 border-b border-gray-700">
         <div className="flex items-center gap-2">
           <div className="w-9 h-9 rounded-full bg-white border border-white/60 flex items-center justify-center overflow-hidden shadow-sm">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="https://img.icons8.com/ios/50/cn-tower.png"
               alt="CN Tower logo"
@@ -314,6 +315,7 @@ export default function Sidebar() {
                   : 'text-gray-300 hover:bg-gray-700'
               }`}
             >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img 
                 src="/cohere-logo.png" 
                 alt="Cohere" 

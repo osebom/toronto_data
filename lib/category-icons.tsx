@@ -1,11 +1,19 @@
+/* eslint-disable @next/next/no-img-element */
 import { IconType } from 'react-icons';
 import { FaBrush, FaBook, FaRunning, FaFutbol, FaGlassCheers, FaChalkboardTeacher, FaLaptop, FaFlagCheckered, FaMicrophoneAlt } from 'react-icons/fa';
 import { GiCampingTent } from 'react-icons/gi';
 import { MdNightlife } from 'react-icons/md';
 import { TbMicroscope } from 'react-icons/tb';
 import { BiWorld } from 'react-icons/bi';
+import React from 'react';
 
-const PaletteIcon: IconType = ({ size = 24, className, ...props }) => (
+type IconComponentProps = {
+  size?: number;
+  className?: string;
+  [key: string]: any;
+};
+
+const PaletteIcon = ({ size = 24, className, ...props }: IconComponentProps) => (
   <img
     src="https://img.icons8.com/3d-fluency/94/paint-palette.png"
     width={size}
@@ -24,7 +32,7 @@ const PaletteIcon: IconType = ({ size = 24, className, ...props }) => (
   />
 );
 
-const ArtisanIcon: IconType = ({ size = 24, className, ...props }) => (
+const ArtisanIcon = ({ size = 24, className, ...props }: IconComponentProps) => (
   <img
     src="https://img.icons8.com/3d-fluency/94/potters-wheel.png"
     width={size}
@@ -43,7 +51,7 @@ const ArtisanIcon: IconType = ({ size = 24, className, ...props }) => (
   />
 );
 
-const MarketCrateIcon: IconType = ({ size = 24, className, ...props }) => (
+const MarketCrateIcon = ({ size = 24, className, ...props }: IconComponentProps) => (
   <img
     src="https://img.icons8.com/3d-fluency/94/shopping-basket.png"
     width={size}
@@ -62,7 +70,7 @@ const MarketCrateIcon: IconType = ({ size = 24, className, ...props }) => (
   />
 );
 
-const LivePerformanceIcon: IconType = ({ size = 24, className, ...props }) => (
+const LivePerformanceIcon = ({ size = 24, className, ...props }: IconComponentProps) => (
   <img
     src="https://img.icons8.com/3d-fluency/94/micro.png"
     width={size}
@@ -81,7 +89,7 @@ const LivePerformanceIcon: IconType = ({ size = 24, className, ...props }) => (
   />
 );
 
-const CharityIcon: IconType = ({ size = 24, className, ...props }) => (
+const CharityIcon = ({ size = 24, className, ...props }: IconComponentProps) => (
   <img
     src="https://img.icons8.com/3d-fluency/94/trust.png"
     width={size}
@@ -100,7 +108,7 @@ const CharityIcon: IconType = ({ size = 24, className, ...props }) => (
   />
 );
 
-const FoodIcon: IconType = ({ size = 24, className, ...props }) => (
+const FoodIcon = ({ size = 24, className, ...props }: IconComponentProps) => (
   <img
     src="https://img.icons8.com/3d-fluency/94/restaurant.png"
     width={size}
@@ -119,7 +127,7 @@ const FoodIcon: IconType = ({ size = 24, className, ...props }) => (
   />
 );
 
-const MusicIcon: IconType = ({ size = 24, className, ...props }) => (
+const MusicIcon = ({ size = 24, className, ...props }: IconComponentProps) => (
   <img
     src="https://img.icons8.com/3d-fluency/94/music.png"
     width={size}
@@ -138,7 +146,7 @@ const MusicIcon: IconType = ({ size = 24, className, ...props }) => (
   />
 );
 
-const FilmIcon: IconType = ({ size = 24, className, ...props }) => (
+const FilmIcon = ({ size = 24, className, ...props }: IconComponentProps) => (
   <img
     src="https://img.icons8.com/3d-fluency/94/documentary.png"
     width={size}
@@ -157,7 +165,7 @@ const FilmIcon: IconType = ({ size = 24, className, ...props }) => (
   />
 );
 
-const OtherIcon: IconType = ({ size = 24, className, ...props }) => (
+const OtherIcon = ({ size = 24, className, ...props }: IconComponentProps) => (
   <img
     src="https://img.icons8.com/3d-fluency/94/calendar--v2.png"
     width={size}
@@ -176,7 +184,7 @@ const OtherIcon: IconType = ({ size = 24, className, ...props }) => (
   />
 );
 
-const ConsumerShowIcon: IconType = ({ size = 24, className, ...props }) => (
+const ConsumerShowIcon = ({ size = 24, className, ...props }: IconComponentProps) => (
   <img
     src="https://img.icons8.com/3d-fluency/94/shopping-bag.png"
     width={size}
@@ -195,7 +203,7 @@ const ConsumerShowIcon: IconType = ({ size = 24, className, ...props }) => (
   />
 );
 
-const HistoryIcon: IconType = ({ size = 24, className, ...props }) => (
+const HistoryIcon = ({ size = 24, className, ...props }: IconComponentProps) => (
   <img
     src="https://img.icons8.com/3d-fluency/94/exhibition.png"
     width={size}
@@ -214,7 +222,7 @@ const HistoryIcon: IconType = ({ size = 24, className, ...props }) => (
   />
 );
 
-const RainbowIcon: IconType = ({ size = 24, className, ...props }) => (
+const RainbowIcon = ({ size = 24, className, ...props }: IconComponentProps) => (
   <img
     src="https://img.icons8.com/3d-fluency/94/rainbow.png"
     width={size}
@@ -233,7 +241,7 @@ const RainbowIcon: IconType = ({ size = 24, className, ...props }) => (
   />
 );
 
-const LiteraryIcon: IconType = ({ size = 24, className, ...props }) => (
+const LiteraryIcon = ({ size = 24, className, ...props }: IconComponentProps) => (
   <img
     src="https://img.icons8.com/3d-fluency/94/book-shelf.png"
     width={size}
@@ -252,7 +260,7 @@ const LiteraryIcon: IconType = ({ size = 24, className, ...props }) => (
   />
 );
 
-const CelebrationsIcon: IconType = ({ size = 24, className, ...props }) => (
+const CelebrationsIcon = ({ size = 24, className, ...props }: IconComponentProps) => (
   <img
     src="https://img.icons8.com/3d-fluency/94/confetti.png"
     width={size}
@@ -271,7 +279,7 @@ const CelebrationsIcon: IconType = ({ size = 24, className, ...props }) => (
   />
 );
 
-const EnvironmentalIcon: IconType = ({ size = 24, className, ...props }) => (
+const EnvironmentalIcon = ({ size = 24, className, ...props }: IconComponentProps) => (
   <img
     src="https://img.icons8.com/3d-fluency/94/nature.png"
     width={size}
@@ -290,7 +298,7 @@ const EnvironmentalIcon: IconType = ({ size = 24, className, ...props }) => (
   />
 );
 
-const FamilyIcon: IconType = ({ size = 24, className, ...props }) => (
+const FamilyIcon = ({ size = 24, className, ...props }: IconComponentProps) => (
   <img
     src="https://img.icons8.com/color/96/family.png"
     width={size}
@@ -309,7 +317,7 @@ const FamilyIcon: IconType = ({ size = 24, className, ...props }) => (
   />
 );
 
-const ComedyIcon: IconType = ({ size = 24, className, ...props }) => (
+const ComedyIcon = ({ size = 24, className, ...props }: IconComponentProps) => (
   <img
     src="https://img.icons8.com/3d-fluency/94/comedy.png"
     width={size}
@@ -329,7 +337,7 @@ const ComedyIcon: IconType = ({ size = 24, className, ...props }) => (
 );
 
 type CategoryGroup = {
-  icon: IconType;
+  icon: IconType | React.ComponentType<IconComponentProps>;
   categories: string[];
 };
 
@@ -364,7 +372,7 @@ const CATEGORY_GROUPS: CategoryGroup[] = [
 
 const FALLBACK_ICON = OtherIcon;
 
-export function getCategoryIcon(categories: string[]): IconType {
+export function getCategoryIcon(categories: string[]): IconType | React.ComponentType<IconComponentProps> {
   for (const category of categories) {
     const group = CATEGORY_GROUPS.find((group) =>
       group.categories.includes(category)

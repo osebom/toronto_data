@@ -8,6 +8,13 @@ import { getFeatureIcon, getThemeIcon } from '@/lib/event-metadata';
 import { getCategoryIcon } from '@/lib/category-icons';
 import { IconType } from 'react-icons';
 import { useStore } from '@/store/useStore';
+import React from 'react';
+
+type IconComponentProps = {
+  size?: number;
+  className?: string;
+  [key: string]: any;
+};
 
 interface AIResultsListProps {
   events: Event[];
@@ -26,7 +33,7 @@ export default function AIResultsList({ events }: AIResultsListProps) {
     }
   };
 
-  const getEventIconComponent = (event: Event): IconType | null => {
+  const getEventIconComponent = (event: Event): IconType | React.ComponentType<IconComponentProps> | null => {
     if (event.categories && event.categories.length > 0) {
       return getCategoryIcon(event.categories);
     }

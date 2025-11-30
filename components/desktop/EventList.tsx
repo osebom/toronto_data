@@ -8,6 +8,13 @@ import { TORONTO_CENTER_LOCATION } from '@/lib/dummy-data';
 import { getFeatureIcon, getThemeIcon } from '@/lib/event-metadata';
 import { getCategoryIcon } from '@/lib/category-icons';
 import { IconType } from 'react-icons';
+import React from 'react';
+
+type IconComponentProps = {
+  size?: number;
+  className?: string;
+  [key: string]: any;
+};
 
 export default function EventList() {
   const { filteredEvents, setSelectedEvent, selectedEvent, userLocation, isLoadingEvents, eventsLoadedCount, totalEventsCount } = useStore();
@@ -25,7 +32,7 @@ export default function EventList() {
     }
   };
 
-  const getEventIconComponent = (event: Event): IconType | null => {
+  const getEventIconComponent = (event: Event): IconType | React.ComponentType<IconComponentProps> | null => {
     if (event.categories && event.categories.length > 0) {
       return getCategoryIcon(event.categories);
     }
