@@ -4,7 +4,8 @@ import { useEffect, useRef, useState } from 'react';
 import { useStore } from '@/store/useStore';
 import { TORONTO_CENTER_LOCATION } from '@/lib/dummy-data';
 import { Brand, POI, Event } from '@/types';
-import { getEventEmoji } from '@/lib/event-icons';
+import { getCategoryIcon } from '@/lib/category-icons';
+import { renderToStaticMarkup } from 'react-dom/server';
 
 // CSS will be imported dynamically
 
@@ -19,7 +20,7 @@ export default function MapView({ mode }: MapViewProps) {
   const markersRef = useRef<any[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
   
-  const { filteredBrands, filteredPOIs, filteredEvents, isMobile, searchQuery, selectedFilter, selectedCategory, selectedEvent } = useStore();
+  const { filteredBrands, filteredPOIs, filteredEvents, events, isMobile, searchQuery, selectedFilter, selectedCategory, selectedEvent, selectedThemes, selectedDateRange, selectedCategories } = useStore();
 
   useEffect(() => {
     if (typeof window === 'undefined' || !mapContainer.current || map.current) return;
@@ -124,7 +125,7 @@ export default function MapView({ mode }: MapViewProps) {
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoaded, mode, searchQuery, selectedFilter, selectedCategory, selectedEvent]);
+  }, [isLoaded, mode, events, searchQuery, selectedFilter, selectedCategory, selectedEvent, selectedThemes, selectedDateRange, selectedCategories]);
 
   // Resize map when container size changes
   useEffect(() => {
@@ -272,21 +273,55 @@ export default function MapView({ mode }: MapViewProps) {
     el.style.width = '50px';
     el.style.height = '50px';
     el.style.borderRadius = '50%';
-    el.style.backgroundColor = event.isFree ? '#10b981' : '#3b82f6'; // Green for free, blue for paid
-    el.style.border = '3px solid #ffffff';
+    el.style.backgroundColor = '#ffffff';
+    el.style.border = '2px solid #e5e7eb';
     el.style.display = 'flex';
     el.style.alignItems = 'center';
     el.style.justifyContent = 'center';
+    el.style.paddingTop = '0px';
     el.style.cursor = 'pointer';
-    el.style.fontSize = '20px';
+    el.style.fontSize = '16px';
     el.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)';
     el.style.position = 'relative';
     el.style.zIndex = '1000';
     el.style.fontWeight = 'bold';
-    el.style.color = '#ffffff';
+    el.style.color = '#111827';
+    el.style.textTransform = 'uppercase';
+    el.style.letterSpacing = '-0.5px';
 
-    const eventEmoji = getEventEmoji(event.categories);
-    el.textContent = eventEmoji;
+    const IconComponent = getCategoryIcon(event.categories || []);
+    const iconMarkup = renderToStaticMarkup(
+      <div
+        style={{
+          width: '70%',
+          height: '70%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: 0,
+        }}
+      >
+        <IconComponent color="#111827" size={15} />
+      </div>
+    );
+    el.innerHTML = iconMarkup;
+
+    if (event.isFree) {
+      const freeBar = document.createElement('div');
+      freeBar.textContent = 'FREE';
+      freeBar.style.position = 'absolute';
+      freeBar.style.top = '100%';
+      freeBar.style.left = '50%';
+      freeBar.style.transform = 'translate(-50%, 0px)';
+      freeBar.style.padding = '2px 6px';
+      freeBar.style.borderRadius = '6px';
+      freeBar.style.backgroundColor = '#10b981';
+      freeBar.style.color = '#ffffff';
+      freeBar.style.fontSize = '10px';
+      freeBar.style.fontWeight = '700';
+      freeBar.style.boxShadow = '0 1px 4px rgba(0,0,0,0.2)';
+      el.appendChild(freeBar);
+    }
 
     // Add label with event name
     const label = document.createElement('div');
@@ -298,6 +333,7 @@ export default function MapView({ mode }: MapViewProps) {
       className: 'custom-event-marker',
       iconSize: [50, 75],
       iconAnchor: [25, 75],
+      popupAnchor: [0, -70], // arrow centers above the circle
     });
 
     const marker = Leaflet.marker([event.location.lat, event.location.lng], { icon })

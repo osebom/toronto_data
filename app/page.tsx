@@ -9,27 +9,37 @@ import MapView from '@/components/map/MapView';
 import BottomFilters from '@/components/mobile/BottomFilters';
 import SearchBar from '@/components/mobile/SearchBar';
 import MapControls from '@/components/mobile/MapControls';
-import { fetchTorontoEvents } from '@/lib/fetch-events';
+import { loadEventsProgressive } from '@/lib/load-events-progressive';
 
 export default function Home() {
-  const { isMobile, setEvents } = useStore();
+  const { isMobile, setEvents, setIsLoadingEvents, setEventsProgress } = useStore();
   useResponsive();
   useGeolocation(); // Get user's location
 
   useEffect(() => {
     const controller = new AbortController();
 
-    fetchTorontoEvents(controller.signal)
-      .then((events) => setEvents(events))
-      .catch((error) => {
-        if ((error as Error).name === 'AbortError') {
-          return;
+    setIsLoadingEvents(true);
+
+    loadEventsProgressive(
+      (events, loaded, total, isComplete) => {
+        setEvents(events);
+        setEventsProgress(loaded, total);
+        if (isComplete) {
+          setIsLoadingEvents(false);
         }
-        console.error('Failed to load events:', error);
-      });
+      },
+      controller.signal
+    ).catch((error) => {
+      if ((error as Error).name === 'AbortError') {
+        return;
+      }
+      console.error('Failed to load events:', error);
+      setIsLoadingEvents(false);
+    });
 
     return () => controller.abort();
-  }, [setEvents]);
+  }, [setEvents, setIsLoadingEvents, setEventsProgress]);
 
   // Determine which mode to show based on mobile/desktop
   const mapMode = 'events'; // Show events on both mobile and desktop

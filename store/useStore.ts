@@ -6,6 +6,11 @@ import { sampleApiEvents } from '@/lib/sample-events';
 import { calculateDistanceMiles } from '@/lib/utils';
 import { TORONTO_CENTER_LOCATION } from '@/lib/dummy-data';
 
+interface DateRangeFilter {
+  start: string | null;
+  end: string | null;
+}
+
 interface AppState {
   // View mode
   isMobile: boolean;
@@ -21,6 +26,13 @@ interface AppState {
   events: Event[];
   setEvents: (events: Event[]) => void;
   
+  // Loading states
+  isLoadingEvents: boolean;
+  setIsLoadingEvents: (loading: boolean) => void;
+  eventsLoadedCount: number;
+  totalEventsCount: number;
+  setEventsProgress: (loaded: number, total: number) => void;
+  
   // Filters
   selectedFilter: FilterOption;
   setSelectedFilter: (filter: FilterOption) => void;
@@ -31,8 +43,14 @@ interface AppState {
   selectedCategory: POICategory | null;
   setSelectedCategory: (category: POICategory | null) => void;
 
-  selectedTheme: string | null;
-  setSelectedTheme: (theme: string | null) => void;
+  selectedThemes: string[];
+  setSelectedThemes: (themes: string[]) => void;
+
+  selectedCategories: string[];
+  setSelectedCategories: (categories: string[]) => void;
+  
+  selectedDateRange: DateRangeFilter;
+  setSelectedDateRange: (range: DateRangeFilter) => void;
   
   searchQuery: string;
   setSearchQuery: (query: string) => void;
@@ -65,6 +83,12 @@ export const useStore = create<AppState>((set, get) => ({
   events: parseEvents(sampleApiEvents),
   setEvents: (events) => set({ events }),
   
+  isLoadingEvents: false,
+  setIsLoadingEvents: (loading) => set({ isLoadingEvents: loading }),
+  eventsLoadedCount: 0,
+  totalEventsCount: 0,
+  setEventsProgress: (loaded, total) => set({ eventsLoadedCount: loaded, totalEventsCount: total }),
+  
   selectedFilter: 'all',
   setSelectedFilter: (filter) => set({ selectedFilter: filter }),
   
@@ -74,8 +98,14 @@ export const useStore = create<AppState>((set, get) => ({
   selectedCategory: null,
   setSelectedCategory: (category) => set({ selectedCategory: category }),
 
-  selectedTheme: null,
-  setSelectedTheme: (theme) => set({ selectedTheme: theme }),
+  selectedThemes: [],
+  setSelectedThemes: (themes) => set({ selectedThemes: themes }),
+
+  selectedCategories: [],
+  setSelectedCategories: (categories) => set({ selectedCategories: categories }),
+  
+  selectedDateRange: { start: null, end: null },
+  setSelectedDateRange: (range) => set({ selectedDateRange: range }),
   
   searchQuery: '',
   setSearchQuery: (query) => set({ searchQuery: query }),
@@ -136,8 +166,13 @@ export const useStore = create<AppState>((set, get) => ({
   },
   
   filteredEvents: () => {
-    const { events, searchQuery, selectedFilter, selectedSort, selectedTheme } = get();
+    const { events, searchQuery, selectedFilter, selectedSort, selectedThemes, selectedDateRange, selectedCategories } = get();
     let filtered = [...events];
+
+    const startBoundary = selectedDateRange.start ? new Date(selectedDateRange.start) : null;
+    const endBoundary = selectedDateRange.end ? new Date(selectedDateRange.end) : null;
+    if (startBoundary) startBoundary.setHours(0, 0, 0, 0);
+    if (endBoundary) endBoundary.setHours(23, 59, 59, 999);
     
     // Filter by free/paid status
     if (selectedFilter === 'free') {
@@ -148,8 +183,32 @@ export const useStore = create<AppState>((set, get) => ({
       filtered = filtered.filter((event) => event.isAccessible);
     }
 
-    if (selectedTheme) {
-      filtered = filtered.filter((event) => event.themes.includes(selectedTheme));
+    if (selectedThemes.length > 0) {
+      filtered = filtered.filter((event) =>
+        event.themes.some((theme) => selectedThemes.includes(theme))
+      );
+    }
+
+    if (selectedCategories.length > 0) {
+      filtered = filtered.filter((event) =>
+        event.categories.some((category) => selectedCategories.includes(category))
+      );
+    }
+
+    // Filter by date range (overlapping events)
+    if (startBoundary || endBoundary) {
+      filtered = filtered.filter((event) => {
+        const eventStart = new Date(event.startDate);
+        const eventEnd = new Date(event.endDate);
+
+        if (Number.isNaN(eventStart.getTime()) || Number.isNaN(eventEnd.getTime())) {
+          return true;
+        }
+
+        if (startBoundary && eventEnd < startBoundary) return false;
+        if (endBoundary && eventStart > endBoundary) return false;
+        return true;
+      });
     }
     
     // Filter by search query

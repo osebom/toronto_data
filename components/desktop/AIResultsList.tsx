@@ -1,6 +1,5 @@
 'use client';
 
-import { useStore } from '@/store/useStore';
 import { Event } from '@/types';
 import { format } from 'date-fns';
 import { calculateDistanceMiles, formatDistance } from '@/lib/utils';
@@ -8,12 +7,14 @@ import { TORONTO_CENTER_LOCATION } from '@/lib/dummy-data';
 import { getFeatureIcon, getThemeIcon } from '@/lib/event-metadata';
 import { getCategoryIcon } from '@/lib/category-icons';
 import { IconType } from 'react-icons';
+import { useStore } from '@/store/useStore';
 
-export default function EventList() {
-  const { filteredEvents, setSelectedEvent, selectedEvent, userLocation, isLoadingEvents, eventsLoadedCount, totalEventsCount } = useStore();
-  const events = filteredEvents();
-  
-  // Use user's location if available, otherwise fall back to Toronto center
+interface AIResultsListProps {
+  events: Event[];
+}
+
+export default function AIResultsList({ events }: AIResultsListProps) {
+  const { setSelectedEvent, selectedEvent, userLocation } = useStore();
   const referenceLocation = userLocation || TORONTO_CENTER_LOCATION;
 
   const formatEventDate = (dateString: string) => {
@@ -31,6 +32,14 @@ export default function EventList() {
     }
     return null;
   };
+
+  if (events.length === 0) {
+    return (
+      <div className="text-center text-gray-400 py-8 text-sm">
+        No events found matching your criteria
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 space-y-3">
@@ -56,9 +65,9 @@ export default function EventList() {
                 );
               }
               return (
-              <span className="text-gray-900 text-xl">
-                {event.themes?.[0] ? getThemeIcon(event.themes[0]) : '📅'}
-              </span>
+                <span className="text-gray-900 text-xl">
+                  {event.themes?.[0] ? getThemeIcon(event.themes[0]) : '📅'}
+                </span>
               );
             })()}
           </div>
@@ -121,20 +130,6 @@ export default function EventList() {
               </div>
             )}
 
-            {event.features && event.features.length > 0 && (
-              <div className="flex items-center gap-2 mt-2 flex-wrap">
-                {event.features.slice(0, 3).map((feature) => (
-                  <span
-                    key={feature}
-                    className="text-xs px-2 py-0.5 bg-gray-800 text-gray-200 rounded flex items-center gap-1"
-                  >
-                    <span>{getFeatureIcon(feature)}</span>
-                    {feature}
-                  </span>
-                ))}
-              </div>
-            )}
-
             {(event.isAccessible || event.reservationsRequired || event.price) && (
               <div className="flex items-center gap-2 mt-2 flex-wrap text-xs">
                 {event.price && (
@@ -156,16 +151,6 @@ export default function EventList() {
                 )}
               </div>
             )}
-
-            {event.partnerships && event.partnerships.length > 0 && (
-              <div className="text-[11px] text-gray-400 mt-2 space-y-0.5">
-                {event.partnerships.map((partner, idx) => (
-                  <div key={`${partner.name}-${idx}`}>
-                    <span className="text-gray-500">{partner.role}:</span> {partner.name}
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
 
           {/* Free/Paid Badge */}
@@ -182,53 +167,8 @@ export default function EventList() {
           </div>
         </div>
       ))}
-
-      {events.length === 0 && !isLoadingEvents && (
-        <div className="text-center text-gray-400 py-8">
-          No events found
-        </div>
-      )}
-
-      {isLoadingEvents && (
-        <div className="mt-4 p-4 bg-dark-card border border-gray-700 rounded-lg">
-          <div className="flex items-center gap-3">
-            <div className="flex gap-1">
-              <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" style={{ animationDelay: '0ms' }} />
-              <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" style={{ animationDelay: '150ms' }} />
-              <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" style={{ animationDelay: '300ms' }} />
-            </div>
-            <div className="flex-1">
-              <div className="text-sm text-gray-300 font-medium">
-                Loading more events...
-              </div>
-              {totalEventsCount > 0 && (
-                <div className="text-xs text-gray-500 mt-1">
-                  {eventsLoadedCount} of {totalEventsCount} loaded
-                </div>
-              )}
-              {totalEventsCount > 0 && (
-                <div className="mt-2 w-full bg-gray-700 rounded-full h-1.5 overflow-hidden">
-                  <div
-                    className="h-full bg-emerald-500 rounded-full transition-all duration-300 ease-out"
-                    style={{ width: `${Math.min((eventsLoadedCount / totalEventsCount) * 100, 100)}%` }}
-                  />
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {!isLoadingEvents && totalEventsCount > 0 && eventsLoadedCount === totalEventsCount && events.length > 0 && (
-        <div className="mt-4 p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-lg">
-          <div className="flex items-center gap-2 text-sm text-emerald-300">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
-            <span>All {totalEventsCount} events loaded</span>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
+
+
