@@ -232,7 +232,10 @@ export default function Sidebar() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to process AI search');
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.details || errorData.error || 'Failed to process AI search';
+        console.error('AI search API error:', errorMessage, errorData);
+        throw new Error(errorMessage);
       }
 
       const { filters } = await response.json() as { filters: ExtractedFilters };

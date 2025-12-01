@@ -27,6 +27,7 @@ export async function POST(request: Request) {
     }
 
     if (!process.env.COHERE_API_KEY) {
+      console.error('COHERE_API_KEY is not set in environment variables');
       return NextResponse.json(
         { error: 'Cohere API key not configured' },
         { status: 500 }
@@ -63,14 +64,93 @@ Return ONLY a valid JSON object with this structure:
 
 JSON:`;
 
-    const response = await cohere.generate({
-      model: 'command',
-      prompt,
-      maxTokens: 300,
-      temperature: 0.3,
-    });
+    let response;
+    try {
+      response = await cohere.chat({
+        model: 'command-a-03-2025',
+        message: prompt,
+        maxTokens: 300,
+        temperature: 0.3,
+      });
+    } catch (apiError) {
+      console.error('Cohere API call failed:', apiError);
+      if (apiError instanceof Error) {
+        console.error('API Error message:', apiError.message);
+        console.error('API Error stack:', apiError.stack);
+      }
+      // Return a more helpful error
+      return NextResponse.json(
+        { 
+          error: 'Cohere API call failed',
+          details: apiError instanceof Error ? apiError.message : 'Unknown API error',
+          // Fallback to keyword search
+          filters: {
+            keywords: query.split(/\s+/).filter(w => w.length > 2),
+          }
+        },
+        { status: 500 }
+      );
+    }
 
-    const generatedText = response.generations[0]?.text?.trim() || '{}';
+    // Debug: log response structure to understand the API
+    console.log('Cohere response type:', typeof response);
+    if (response) {
+      try {
+        console.log('Cohere response keys:', Object.keys(response));
+        // Try to serialize, but catch errors if it fails
+        const serialized = JSON.stringify(response, (key, value) => {
+          // Skip functions and undefined
+          if (typeof value === 'function' || value === undefined) {
+            return '[Function]';
+          }
+          return value;
+        }, 2);
+        console.log('Cohere response:', serialized);
+      } catch (serializeError) {
+        console.log('Could not serialize response, trying to access properties directly');
+        console.log('response.text:', (response as any).text);
+        console.log('response.message:', (response as any).message);
+      }
+    }
+    
+    // Chat API v2 might return text in different places - try multiple options
+    let generatedText = '{}';
+    if (response) {
+      try {
+        // Try response.text first (most common)
+        if ('text' in response && response.text) {
+          generatedText = String(response.text).trim();
+        }
+        // Try response.message?.text (some API versions)
+        else if ((response as any).message?.text) {
+          generatedText = String((response as any).message.text).trim();
+        }
+        // Try response.message if it's a string
+        else if (typeof (response as any).message === 'string') {
+          generatedText = (response as any).message.trim();
+        }
+        // Try accessing the first message in an array
+        else if (Array.isArray((response as any).messages) && (response as any).messages[0]?.text) {
+          generatedText = String((response as any).messages[0].text).trim();
+        }
+        // Try response.generations (legacy format)
+        else if (Array.isArray((response as any).generations) && (response as any).generations[0]?.text) {
+          generatedText = String((response as any).generations[0].text).trim();
+        }
+      } catch (accessError) {
+        console.error('Error accessing response properties:', accessError);
+      }
+    }
+    
+    if (!generatedText || generatedText === '{}') {
+      console.error('Could not extract text from Cohere response. Full response:', response);
+      // Fallback to keywords
+      return NextResponse.json({
+        filters: {
+          keywords: query.split(/\s+/).filter(w => w.length > 2),
+        }
+      });
+    }
     
     // Try to extract JSON from the response
     let jsonMatch = generatedText.match(/\{[\s\S]*\}/);
@@ -117,8 +197,16 @@ JSON:`;
     return NextResponse.json({ filters: validatedFilters });
   } catch (error) {
     console.error('AI search error:', error);
+    // Log more details about the error
+    if (error instanceof Error) {
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+    }
     return NextResponse.json(
-      { error: 'Failed to process AI search' },
+      { 
+        error: 'Failed to process AI search',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
       { status: 500 }
     );
   }
