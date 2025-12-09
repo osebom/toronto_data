@@ -8,8 +8,11 @@ export default function SearchBar() {
 
   return (
     <div 
-      className="absolute bottom-0 left-0 right-0 p-4 pb-6 bg-transparent pointer-events-none"
-      style={{ zIndex: 1000 }}
+      className="absolute bottom-0 left-0 right-0 p-4 bg-transparent pointer-events-none"
+      style={{ 
+        zIndex: 1000,
+        paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom, 0px) + 1.5rem)'
+      }}
     >
       <div className="relative pointer-events-auto">
         <input
