@@ -91,27 +91,6 @@ JSON:`;
         { status: 500 }
       );
     }
-
-    // Debug: log response structure to understand the API
-    console.log('Cohere response type:', typeof response);
-    if (response) {
-      try {
-        console.log('Cohere response keys:', Object.keys(response));
-        // Try to serialize, but catch errors if it fails
-        const serialized = JSON.stringify(response, (key, value) => {
-          // Skip functions and undefined
-          if (typeof value === 'function' || value === undefined) {
-            return '[Function]';
-          }
-          return value;
-        }, 2);
-        console.log('Cohere response:', serialized);
-      } catch (serializeError) {
-        console.log('Could not serialize response, trying to access properties directly');
-        console.log('response.text:', (response as any).text);
-        console.log('response.message:', (response as any).message);
-      }
-    }
     
     // Chat API v2 might return text in different places - try multiple options
     let generatedText = '{}';
