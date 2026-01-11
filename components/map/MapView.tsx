@@ -340,10 +340,14 @@ export default function MapView({ mode }: MapViewProps) {
       .addTo(map.current);
 
     // Add popup on click
+    const mapsUrl = event.locationAddress 
+      ? `https://www.google.com/maps?q=${encodeURIComponent(event.locationAddress)}`
+      : `https://www.google.com/maps?q=${event.location.lat},${event.location.lng}`;
     const popupContent = `
       <div style="min-width: 200px;">
         <h3 style="margin: 0 0 8px 0; font-weight: bold; font-size: 16px;">${event.name}</h3>
         <p style="margin: 0 0 8px 0; color: #666; font-size: 13px;">${event.locationName}</p>
+        ${event.locationAddress ? `<a href="${mapsUrl}" target="_blank" style="color: #3b82f6; text-decoration: none; font-size: 12px;">${event.locationAddress}</a>` : ''}
         <p style="margin: 0 0 8px 0; font-size: 13px;">${event.shortDescription || event.description.substring(0, 100)}...</p>
         ${event.website ? `<a href="${event.website}" target="_blank" style="color: #3b82f6; text-decoration: none; font-size: 12px;">Learn more →</a>` : ''}
       </div>
