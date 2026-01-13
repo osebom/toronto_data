@@ -6,8 +6,8 @@ export default function MapControls() {
   const handleCurrentLocation = () => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition((position) => {
-        // Handle location update
-        console.log('Current location:', position.coords);
+        // Location will be handled by useGeolocation hook
+        // This is just for centering the map
       });
     }
   };

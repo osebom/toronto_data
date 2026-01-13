@@ -10,7 +10,6 @@ export function useGeolocation() {
 
     // Check if geolocation is supported
     if (!navigator.geolocation) {
-      console.log('Geolocation is not supported by this browser');
       return;
     }
 
@@ -22,7 +21,6 @@ export function useGeolocation() {
           lng: position.coords.longitude,
         };
         setUserLocation(location);
-        console.log('User location set:', location);
       },
       (error) => {
         console.error('Error getting user location:', error);

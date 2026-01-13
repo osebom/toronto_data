@@ -14,6 +14,11 @@ export function filterEventsWithAIFilters(
   filters: ExtractedFilters,
   userLocation?: Location | null
 ): Event[] {
+  console.log('[Filter Events] Starting filter with:', {
+    totalEvents: events.length,
+    filters: JSON.stringify(filters),
+  });
+  
   let filtered = [...events];
 
   // Hard constraint: Date range
@@ -40,7 +45,13 @@ export function filterEventsWithAIFilters(
 
   // Hard constraint: Free/Paid
   if (filters.isFree !== null && filters.isFree !== undefined) {
+    const beforeCount = filtered.length;
     filtered = filtered.filter((event) => event.isFree === filters.isFree);
+    console.log('[Filter Events] After isFree filter:', {
+      before: beforeCount,
+      after: filtered.length,
+      isFree: filters.isFree,
+    });
   }
 
   // Hard constraint: Accessible
@@ -64,6 +75,12 @@ export function filterEventsWithAIFilters(
 
   // Soft constraint: Keywords (search in name, description, location)
   if (filters.keywords && filters.keywords.length > 0) {
+    const beforeCount = filtered.length;
+    console.log('[Filter Events] Applying keyword filter:', {
+      keywords: filters.keywords,
+      eventsBefore: beforeCount,
+    });
+    
     filtered = filtered.filter((event) => {
       const searchableText = [
         event.name,
@@ -77,10 +94,33 @@ export function filterEventsWithAIFilters(
         .join(' ')
         .toLowerCase();
 
-      return filters.keywords!.some((keyword) => searchableText.includes(keyword.toLowerCase()));
+      // Try to match any keyword, and also try to match individual words from phrases
+      const matches = filters.keywords!.some((keyword) => {
+        const keywordLower = keyword.toLowerCase();
+        // Try exact match first
+        if (searchableText.includes(keywordLower)) {
+          return true;
+        }
+        // Try matching individual words from phrases like "this weekend" -> "weekend"
+        const words = keywordLower.split(/\s+/).filter(w => w.length > 2);
+        return words.some(word => searchableText.includes(word));
+      });
+      
+      if (matches) {
+        console.log('[Filter Events] Event matched keywords:', event.name);
+      }
+      
+      return matches;
+    });
+    
+    console.log('[Filter Events] After keyword filter:', {
+      before: beforeCount,
+      after: filtered.length,
+      keywords: filters.keywords,
     });
   }
 
+  console.log('[Filter Events] Final filtered count:', filtered.length);
   return filtered;
 }
 

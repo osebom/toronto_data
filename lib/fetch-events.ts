@@ -10,15 +10,32 @@ interface TorontoEventsResponse {
 }
 
 export async function fetchTorontoEvents(signal?: AbortSignal): Promise<Event[]> {
-  const response = await fetch(LOCAL_EVENTS_API, {
-    cache: 'no-store',
-    signal,
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
 
-  if (!response.ok) {
-    throw new Error(`Failed to fetch events (${response.status})`);
+  // Combine signals if both are provided
+  if (signal) {
+    signal.addEventListener('abort', () => controller.abort());
   }
 
-  const payload = (await response.json()) as TorontoEventsResponse;
-  return Array.isArray(payload.events) ? payload.events : [];
+  try {
+    const response = await fetch(LOCAL_EVENTS_API, {
+      cache: 'no-store',
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch events (${response.status})`);
+    }
+
+    const payload = (await response.json()) as TorontoEventsResponse;
+    return Array.isArray(payload.events) ? payload.events : [];
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new Error('Request timeout: Events API took too long to respond');
+    }
+    throw error;
+  }
 }

@@ -40,25 +40,39 @@ function dedupeEventsByName(events: Event[]): Event[] {
 
 const getCachedEvents = unstable_cache(
   async () => {
-    const upstreamResponse = await fetch(TORONTO_EVENTS_ENDPOINT, {
-      cache: 'no-store',
-    });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
 
-    if (!upstreamResponse.ok) {
-      throw new Error(`Upstream request failed with status ${upstreamResponse.status}`);
+    try {
+      const upstreamResponse = await fetch(TORONTO_EVENTS_ENDPOINT, {
+        cache: 'no-store',
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+
+      if (!upstreamResponse.ok) {
+        throw new Error(`Upstream request failed with status ${upstreamResponse.status}`);
+      }
+
+      const payload = (await upstreamResponse.json()) as TorontoApiResponse;
+      const rows = Array.isArray(payload.value) ? payload.value : [];
+      // Type assertion needed here as the API response structure is dynamic
+      const parsedEvents = parseEvents(rows as Parameters<typeof parseEvents>[0]);
+
+      const filteredEvents = filterEventsWithinNextMonth<Event>(
+        parsedEvents,
+        (event) => event.startDate,
+        (event) => event.endDate
+      );
+
+      return dedupeEventsByName(filteredEvents);
+    } catch (error) {
+      clearTimeout(timeoutId);
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new Error('Request timeout: External API took too long to respond');
+      }
+      throw error;
     }
-
-    const payload = (await upstreamResponse.json()) as TorontoApiResponse;
-    const rows = Array.isArray(payload.value) ? payload.value : [];
-    const parsedEvents = parseEvents(rows as any[]);
-
-    const filteredEvents = filterEventsWithinNextMonth<Event>(
-      parsedEvents,
-      (event) => event.startDate,
-      (event) => event.endDate
-    );
-
-    return dedupeEventsByName(filteredEvents);
   },
   ['toronto-events-next-month'],
   { revalidate: 3600 }
@@ -67,11 +81,14 @@ const getCachedEvents = unstable_cache(
 export async function GET() {
   try {
     const events = await getCachedEvents();
+    const origin = process.env.ALLOWED_ORIGIN || '*';
     return NextResponse.json(
       { events },
       {
         headers: {
-          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Origin': origin,
+          'Access-Control-Allow-Methods': 'GET',
+          'Access-Control-Allow-Headers': 'Content-Type',
         },
       }
     );

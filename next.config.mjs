@@ -1,7 +1,13 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
-    domains: [],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'secure.toronto.ca',
+        pathname: '/c3api_data/**',
+      },
+    ],
   },
 };
 

@@ -240,11 +240,16 @@ export default function Sidebar() {
 
       const { filters } = await response.json() as { filters: ExtractedFilters };
 
+      console.log('[Sidebar] Received filters from API:', filters);
+      console.log('[Sidebar] Total events available:', events.length);
+
       // Filter events using extracted filters
       const filtered = filterEventsWithAIFilters(events, filters, userLocation);
+      console.log('[Sidebar] Events after filtering:', filtered.length);
       
       // Rank and get top 5
       const top5 = rankAndLimitEvents(filtered, 5, userLocation);
+      console.log('[Sidebar] Top 5 events after ranking:', top5.length);
       setAiResults(top5);
 
       // Generate summaries for top 3
