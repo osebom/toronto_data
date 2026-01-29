@@ -11,6 +11,7 @@ import { filterEventsWithAIFilters, rankAndLimitEvents, generateEventSummary } f
 import { ExtractedFilters } from '@/app/api/ai-search/route';
 import { Event } from '@/types';
 import { getRateLimitStatus, recordMessage, formatTimeUntilReset } from '@/lib/rate-limit';
+import { serverLog } from '@/lib/server-logger';
 
 export default function Sidebar() {
   const {
@@ -58,7 +59,12 @@ export default function Sidebar() {
   const [isTyping, setIsTyping] = useState(false);
   const [aiResults, setAiResults] = useState<Event[]>([]);
   const [rateLimitStatus, setRateLimitStatus] = useState(getRateLimitStatus());
+  const [assistantResponseCount, setAssistantResponseCount] = useState(0);
   const chatRef = useRef<HTMLDivElement>(null);
+
+  // Maximum limits
+  const MAX_CONTEXT_MESSAGES = 5;
+  const MAX_ASSISTANT_RESPONSES = 5;
 
   useEffect(() => {
     if (!chatRef.current) return;
@@ -187,6 +193,15 @@ export default function Sidebar() {
   }, [events]);
 
   const handleAISearch = async (query: string) => {
+    // Check if we've reached the maximum assistant responses
+    if (assistantResponseCount >= MAX_ASSISTANT_RESPONSES) {
+      setChatMessages((prev) => [...prev, { 
+        sender: 'ai', 
+        text: `You've reached the maximum of ${MAX_ASSISTANT_RESPONSES} responses for this session. Please refresh the page to start a new conversation.` 
+      }]);
+      return;
+    }
+
     // Check rate limit before processing
     const currentStatus = getRateLimitStatus();
     
@@ -218,7 +233,13 @@ export default function Sidebar() {
     try {
       setIsTyping(true);
       
-      // Call AI API to extract filters
+      // Get chat context: last MAX_CONTEXT_MESSAGES messages (excluding the initial greeting)
+      // Only include user and assistant messages, not the initial greeting
+      const contextMessages = chatMessages
+        .filter((msg, idx) => idx > 0) // Skip initial greeting
+        .slice(-MAX_CONTEXT_MESSAGES); // Get last N messages
+      
+      // Call AI API to extract filters with chat context
       const response = await fetch('/api/ai-search', {
         method: 'POST',
         headers: {
@@ -228,51 +249,121 @@ export default function Sidebar() {
           query,
           availableThemes,
           availableCategories,
+          chatContext: contextMessages.map(msg => ({
+            role: msg.sender === 'user' ? 'user' : 'assistant',
+            content: msg.text,
+          })),
         }),
       });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        const errorMessage = errorData.details || errorData.error || 'Failed to process AI search';
-        console.error('AI search API error:', errorMessage, errorData);
+        
+        // Handle rate limit errors specifically
+        if (response.status === 429) {
+          const retryAfter = errorData.retryAfter || 0;
+          const resetTime = retryAfter > 0 
+            ? `${Math.ceil(retryAfter / 60)} minute${Math.ceil(retryAfter / 60) !== 1 ? 's' : ''}`
+            : formatTimeUntilReset();
+          const rateLimitMessage = errorData.message || `You've reached your message limit of 4 messages per 2 minutes. Please try again in ${resetTime}.`;
+          setChatMessages((prev) => [...prev, { 
+            sender: 'ai', 
+            text: rateLimitMessage 
+          }]);
+          setRateLimitStatus(getRateLimitStatus());
+          setIsTyping(false);
+          return; // Don't increment count or show generic error
+        }
+        
+        const errorMessage = errorData.details || errorData.error || errorData.message || 'Failed to process AI search';
+        serverLog.error('AI search API error', { errorMessage, status: response.status, errorData });
         throw new Error(errorMessage);
       }
 
-      const { filters } = await response.json() as { filters: ExtractedFilters };
+      const apiResponse = await response.json() as { filters: ExtractedFilters; response?: string };
+      const { filters, response: directResponse } = apiResponse;
 
-      console.log('[Sidebar] Received filters from API:', filters);
-      console.log('[Sidebar] Total events available:', events.length);
+      // If API returned a direct response (non-event question), use it
+      if (directResponse) {
+        setChatMessages((prev) => [...prev, { sender: 'ai', text: directResponse }]);
+        setAiResults([]); // Clear results for non-event questions
+        setAssistantResponseCount((prev) => prev + 1);
+        setRateLimitStatus(getRateLimitStatus());
+        return;
+      }
+
+      // Tool was called - filter events and generate conversational sentence
+      serverLog.info('Starting event filtering', { 
+        totalEvents: events.length,
+        filters: filters,
+      });
 
       // Filter events using extracted filters
       const filtered = filterEventsWithAIFilters(events, filters, userLocation);
-      console.log('[Sidebar] Events after filtering:', filtered.length);
+      serverLog.info('Events after filtering', { 
+        filteredCount: filtered.length,
+        originalCount: events.length,
+      });
       
       // Rank and get top 5
       const top5 = rankAndLimitEvents(filtered, 5, userLocation);
-      console.log('[Sidebar] Top 5 events after ranking:', top5.length);
+      serverLog.info('Top events selected', { 
+        top5Count: top5.length,
+        filteredCount: filtered.length,
+      });
       setAiResults(top5);
 
-      // Generate summaries for top 3
-      const top3 = top5.slice(0, 3);
-      const summaries = top3.map(generateEventSummary);
+      // Generate event summaries for context
+      const summaries = top5.map(generateEventSummary);
 
-      // Add AI response with summaries
+      // Get a conversational sentence from the API (with event results as context)
+      let responseText: string;
       if (summaries.length > 0) {
-        const summaryText = `Found ${top5.length} event${top5.length !== 1 ? 's' : ''}:\n\n${summaries.map((s, i) => `${i + 1}. ${s}`).join('\n')}`;
-        setChatMessages((prev) => [...prev, { sender: 'ai', text: summaryText }]);
+        try {
+          const respondRes = await fetch('/api/ai-search/respond', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              query,
+              eventSummaries: summaries,
+              count: top5.length,
+            }),
+          });
+          if (respondRes.ok) {
+            const { response } = (await respondRes.json()) as { response: string };
+            responseText = response;
+          } else {
+            responseText = `I found ${top5.length} event${top5.length !== 1 ? 's' : ''} for you:\n\n${summaries.map((s, i) => `${i + 1}. ${s}`).join('\n')}`;
+          }
+        } catch {
+          responseText = `I found ${top5.length} event${top5.length !== 1 ? 's' : ''} for you:\n\n${summaries.map((s, i) => `${i + 1}. ${s}`).join('\n')}`;
+        }
       } else {
-        setChatMessages((prev) => [...prev, { sender: 'ai', text: "I couldn't find any events matching your criteria. Try adjusting your search." }]);
+        responseText = "I couldn't find any events matching your criteria. Try adjusting your search.";
       }
+
+      setChatMessages((prev) => [...prev, { sender: 'ai', text: responseText }]);
+
+      // Increment assistant response count
+      setAssistantResponseCount((prev) => prev + 1);
 
       // Update rate limit status after successful search
       setRateLimitStatus(getRateLimitStatus());
     } catch (error) {
-      console.error('AI search error:', error);
+      serverLog.error('AI search error', { 
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+      });
       setChatMessages((prev) => [...prev, { sender: 'ai', text: "Sorry, I encountered an error processing your request. Please try again." }]);
+      // Increment count even on error to prevent abuse
+      setAssistantResponseCount((prev) => prev + 1);
     } finally {
       setIsTyping(false);
     }
   };
+
+  // Check if chat is disabled (max responses reached)
+  const isChatDisabled = assistantResponseCount >= MAX_ASSISTANT_RESPONSES;
 
   return (
     <div className="w-full lg:w-1/3 bg-dark-sidebar h-screen flex flex-col overflow-visible">
@@ -396,7 +487,7 @@ export default function Sidebar() {
                 onSubmit={async (e) => {
                   e.preventDefault();
                   const text = chatInput.trim();
-                  if (!text) return;
+                  if (!text || isChatDisabled) return;
                   
                   // Check rate limit before adding user message
                   const status = getRateLimitStatus();
@@ -412,15 +503,21 @@ export default function Sidebar() {
               >
                 <div className="flex items-center gap-2 bg-black/40 border border-gray-700 rounded-full px-3 py-2">
                   <textarea
-                    placeholder={rateLimitStatus.remaining === 0 ? "Rate limit reached. Please wait..." : "Ask for events…"}
+                    placeholder={
+                      isChatDisabled 
+                        ? `Maximum ${MAX_ASSISTANT_RESPONSES} responses reached. Refresh to continue.`
+                        : rateLimitStatus.remaining === 0 
+                        ? "Rate limit reached. Please wait..." 
+                        : "Ask for events…"
+                    }
                     value={chatInput}
                     onChange={(e) => setChatInput(e.target.value)}
-                    disabled={rateLimitStatus.remaining === 0}
+                    disabled={rateLimitStatus.remaining === 0 || isChatDisabled}
                     onKeyDown={async (e) => {
                       if (e.key === 'Enter' && !e.shiftKey) {
                         e.preventDefault();
                         const text = chatInput.trim();
-                        if (!text) return;
+                        if (!text || isChatDisabled) return;
                         
                         // Check rate limit
                         const status = getRateLimitStatus();
@@ -439,15 +536,20 @@ export default function Sidebar() {
                   />
                   <button
                     type="submit"
-                    disabled={rateLimitStatus.remaining === 0}
+                    disabled={rateLimitStatus.remaining === 0 || isChatDisabled}
                     className="px-3 py-1.5 rounded-full bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-indigo-600"
                   >
                     Send
                   </button>
                 </div>
               </form>
-              <div className="text-[11px] text-gray-500">
-                AI will search events and show results below. Results accuracy may vary.
+              <div className="flex items-center justify-between text-[11px] text-gray-500">
+                <span>AI will search events and show results below. Results accuracy may vary.</span>
+                {isChatDisabled && (
+                  <span className="text-amber-400 font-semibold">
+                    Max responses reached ({assistantResponseCount}/{MAX_ASSISTANT_RESPONSES})
+                  </span>
+                )}
               </div>
             </div>
           </div>

@@ -3,6 +3,7 @@ import { ExtractedFilters } from '@/app/api/ai-search/route';
 import { calculateDistanceMiles } from './utils';
 import { TORONTO_CENTER_LOCATION } from './dummy-data';
 import { Location } from '@/types';
+import { serverLog } from './server-logger';
 
 /**
  * Filter events based on extracted AI filters
@@ -14,11 +15,11 @@ export function filterEventsWithAIFilters(
   filters: ExtractedFilters,
   userLocation?: Location | null
 ): Event[] {
-  console.log('[Filter Events] Starting filter with:', {
+  serverLog.info('[Filter Events] Starting filter', {
     totalEvents: events.length,
     filters: JSON.stringify(filters),
   });
-  
+
   let filtered = [...events];
 
   // Hard constraint: Date range
@@ -47,7 +48,7 @@ export function filterEventsWithAIFilters(
   if (filters.isFree !== null && filters.isFree !== undefined) {
     const beforeCount = filtered.length;
     filtered = filtered.filter((event) => event.isFree === filters.isFree);
-    console.log('[Filter Events] After isFree filter:', {
+    serverLog.info('[Filter Events] After isFree filter', {
       before: beforeCount,
       after: filtered.length,
       isFree: filters.isFree,
@@ -76,11 +77,11 @@ export function filterEventsWithAIFilters(
   // Soft constraint: Keywords (search in name, description, location)
   if (filters.keywords && filters.keywords.length > 0) {
     const beforeCount = filtered.length;
-    console.log('[Filter Events] Applying keyword filter:', {
+    serverLog.info('[Filter Events] Applying keyword filter', {
       keywords: filters.keywords,
       eventsBefore: beforeCount,
     });
-    
+
     filtered = filtered.filter((event) => {
       const searchableText = [
         event.name,
@@ -106,21 +107,21 @@ export function filterEventsWithAIFilters(
         return words.some(word => searchableText.includes(word));
       });
       
-      if (matches) {
-        console.log('[Filter Events] Event matched keywords:', event.name);
-      }
-      
       return matches;
     });
-    
-    console.log('[Filter Events] After keyword filter:', {
+
+    serverLog.info('[Filter Events] After keyword filter', {
       before: beforeCount,
       after: filtered.length,
       keywords: filters.keywords,
     });
   }
 
-  console.log('[Filter Events] Final filtered count:', filtered.length);
+  serverLog.info('[Filter Events] Final filtered count', {
+    finalCount: filtered.length,
+    originalCount: events.length,
+  });
+
   return filtered;
 }
 

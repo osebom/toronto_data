@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { CohereClient } from 'cohere-ai';
+import { Cohere, CohereClient } from 'cohere-ai';
 import { checkRateLimit, getRateLimitHeaders } from '@/lib/server-rate-limit';
 
 // Log that the module is loaded
@@ -189,6 +189,8 @@ export async function POST(request: Request) {
         queryLength: requestBody.query?.length || 0,
         hasThemes: Array.isArray(requestBody.availableThemes),
         hasCategories: Array.isArray(requestBody.availableCategories),
+        hasChatContext: Array.isArray(requestBody.chatContext),
+        chatContextLength: Array.isArray(requestBody.chatContext) ? requestBody.chatContext.length : 0,
       });
     } catch (parseError) {
       console.error('[AI Search] Failed to parse request body:', parseError);
@@ -198,7 +200,30 @@ export async function POST(request: Request) {
       );
     }
 
-    const { query, availableThemes, availableCategories } = requestBody;
+    const { query, availableThemes, availableCategories, chatContext } = requestBody;
+    
+    // Validate and truncate chat context to max 5 messages
+    const MAX_CONTEXT_MESSAGES = 5;
+    let validChatContext: Array<{ role: 'user' | 'assistant'; content: string }> = [];
+    if (Array.isArray(chatContext)) {
+      validChatContext = chatContext
+        .filter((msg: any) => 
+          msg && 
+          typeof msg === 'object' && 
+          (msg.role === 'user' || msg.role === 'assistant') &&
+          typeof msg.content === 'string'
+        )
+        .slice(-MAX_CONTEXT_MESSAGES) // Truncate to last 5 messages
+        .map((msg: any) => ({
+          role: msg.role as 'user' | 'assistant',
+          content: msg.content as string,
+        }));
+    }
+    
+    console.log('[AI Search] Chat context:', {
+      received: Array.isArray(chatContext) ? chatContext.length : 0,
+      valid: validChatContext.length,
+    });
 
     if (!query || typeof query !== 'string') {
       console.error('[AI Search] Invalid query:', { query, type: typeof query });
@@ -221,204 +246,207 @@ export async function POST(request: Request) {
     }
     console.log('[AI Search] Cohere client initialized successfully');
 
-    // Build the prompt for Cohere
-    const themesList = Array.isArray(availableThemes) ? availableThemes.join(', ') : '';
-    const categoriesList = Array.isArray(availableCategories) ? availableCategories.join(', ') : '';
-
-    console.log('[AI Search] Building prompt...', {
-      themesCount: Array.isArray(availableThemes) ? availableThemes.length : 0,
-      categoriesCount: Array.isArray(availableCategories) ? availableCategories.length : 0,
-    });
-
     // Get current date info for relative date calculations
     const now = new Date();
     const today = now.toISOString().split('T')[0]; // YYYY-MM-DD
-    const dayOfWeek = now.getDay(); // 0 = Sunday, 6 = Saturday
-    const daysToSaturday = (6 - dayOfWeek + 7) % 7;
-    const thisSaturday = new Date(now);
-    thisSaturday.setDate(now.getDate() + daysToSaturday);
-    const thisSunday = new Date(thisSaturday);
-    thisSunday.setDate(thisSaturday.getDate() + 1);
-    const tomorrow = new Date(now);
-    tomorrow.setDate(now.getDate() + 1);
-    const nextWeek = new Date(now);
-    nextWeek.setDate(now.getDate() + 7);
+    const themesEnum = Array.isArray(availableThemes) && availableThemes.length > 0 ? [...new Set(availableThemes)].sort() : [];
+    const categoriesEnum = Array.isArray(availableCategories) && availableCategories.length > 0 ? [...new Set(availableCategories)].sort() : [];
+    const themesList = themesEnum.length > 0 ? themesEnum.join(', ') : 'None';
+    const categoriesList = categoriesEnum.length > 0 ? categoriesEnum.join(', ') : 'None';
 
-    const prompt = `Extract event search filters from this user query: "${query}"
+    // Tool: filter_events — only apply filters when the query implies them. Category/theme must be from the API lists only.
+    const tools: Cohere.Tool[] = [
+      {
+        name: 'filter_events',
+        description: 'ALWAYS use this tool when the user asks about finding events in Toronto. Extract search filters from their query. Only include date/category/theme/free/accessible when the user clearly asks for them. Current date: ' + today + '. Available themes (use only these exact strings or omit): ' + themesList + '. Available categories (use only these exact strings or omit): ' + categoriesList + '.',
+        parameterDefinitions: {
+          dateStart: {
+            description: 'Start date in ISO format YYYY-MM-DD. Convert relative dates like today, tomorrow, this weekend, next week to actual dates. Only include if the user mentions a specific date or time period.',
+            type: 'str',
+            required: false,
+          },
+          dateEnd: {
+            description: 'End date in ISO format YYYY-MM-DD. Use same as dateStart for single-day events.',
+            type: 'str',
+            required: false,
+          },
+          isFree: {
+            description: 'True for free events only, false for paid only, omit for no preference. Preserve from context unless changed.',
+            type: 'bool',
+            required: false,
+          },
+          isAccessible: {
+            description: 'True for accessible events only, false otherwise, omit for no preference. Preserve from context unless changed.',
+            type: 'bool',
+            required: false,
+          },
+          themes: {
+            description: 'Comma-separated or JSON array of theme names. Use ONLY from: ' + themesList + '. Omit if no theme filter.',
+            type: 'str',
+            required: false,
+          },
+          categories: {
+            description: 'Comma-separated or JSON array of category names. Use ONLY from: ' + categoriesList + '. Omit if no category filter.',
+            type: 'str',
+            required: false,
+          },
+          keywords: {
+            description: 'Comma-separated or JSON array of keywords for text search. Only use if date cannot be converted to ISO format.',
+            type: 'str',
+            required: false,
+          },
+        },
+      },
+    ];
 
-IMPORTANT: Convert relative date phrases to actual ISO dates (YYYY-MM-DD format).
-Current date: ${today}
-- "today" = ${today}
-- "tomorrow" = ${tomorrow.toISOString().split('T')[0]}
-- "this weekend" = ${thisSaturday.toISOString().split('T')[0]} to ${thisSunday.toISOString().split('T')[0]}
-- "next weekend" = ${new Date(thisSaturday.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]} to ${new Date(thisSunday.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
-- "next week" = ${nextWeek.toISOString().split('T')[0]} onwards
+    // Build chat history for Cohere (role: USER | CHATBOT, message: string)
+    const chatHistory: Array<{ role: 'USER' | 'CHATBOT'; message: string }> = [];
+    for (const msg of validChatContext) {
+      chatHistory.push({
+        role: msg.role === 'user' ? 'USER' : 'CHATBOT',
+        message: msg.content,
+      });
+    }
 
-Available themes: ${themesList || 'None'}
-Available categories: ${categoriesList || 'None'}
+    // Build system message and current query
+    const systemMessage = `You are a helpful assistant that ONLY answers questions about events in Toronto. 
+If the user asks about anything other than events (like general questions, math, weather, etc.), politely redirect them to ask about events.
+For ALL event-related queries, you MUST use the filter_events tool to extract search filters. Only respond directly with text if the user asks something completely unrelated to events.`;
 
-Extract the following information:
-- Date range: Convert relative dates (today, tomorrow, this weekend, next week, etc.) to actual ISO dates (YYYY-MM-DD). Set dateStart and dateEnd to the actual dates, or null if no date mentioned.
-- Free events preference (isFree: true/false/null)
-- Accessibility preference (isAccessible: true/false/null)
-- Matching themes from the available list (themes: array of strings)
-- Matching categories from the available list (categories: array of strings)
-- Keywords for text search (keywords: array of strings) - only use if date cannot be converted
-
-CRITICAL: If the query mentions a time period like "this weekend", "tomorrow", "next week", you MUST convert it to actual dates in dateStart and dateEnd. Do NOT put time phrases in keywords if they can be converted to dates.
-
-Return ONLY a valid JSON object with this structure:
-{
-  "dateStart": "YYYY-MM-DD" or null,
-  "dateEnd": "YYYY-MM-DD" or null,
-  "isFree": true/false/null,
-  "isAccessible": true/false/null,
-  "themes": ["theme1", "theme2"] or [],
-  "categories": ["category1", "category2"] or [],
-  "keywords": ["keyword1", "keyword2"] or []
-}
-
-JSON:`;
-
-    let response;
-    console.log('[AI Search] Calling Cohere API...');
+    console.log('[AI Search] Calling Cohere API with tool calling...');
     const cohereStartTime = Date.now();
+    let response;
+    let filters: ExtractedFilters = {};
+    let conversationalResponse = '';
+
     try {
+      // Step 1: Call API with tools (optional tool calling)
+      // Using chatHistory for multi-turn and system_prompt for system message
       response = await cohere.chat({
         model: 'command-a-03-2025',
-        message: prompt,
-        maxTokens: 300,
+        message: query,
+        chatHistory: chatHistory.length > 0 ? chatHistory : undefined,
+        preamble: systemMessage,
+        tools,
         temperature: 0.3,
+        maxTokens: 300,
       });
+      
       const cohereDuration = Date.now() - cohereStartTime;
       console.log('[AI Search] Cohere API call completed in', cohereDuration, 'ms');
+
+      // NonStreamedChatResponse: text, toolCalls (array of { name, parameters })
+      // When the model calls a tool, it may also return "plan" text (e.g. "I will use the filter_events tool...").
+      // We must NOT return that as the response — only return text when there was no tool call (direct answer).
+      const responseAny = response as { text?: string; toolCalls?: Array<{ name: string; parameters?: Record<string, unknown> }> };
+      const toolCalls = responseAny.toolCalls;
+
+      if (toolCalls && toolCalls.length > 0) {
+        console.log('[AI Search] Tool was called:', toolCalls.length, 'call(s)');
+        
+        const toolCall = toolCalls[0];
+        const functionName = toolCall.name;
+        const toolArgsRaw = toolCall.parameters;
+        
+        if (functionName === 'filter_events' && toolArgsRaw) {
+          try {
+            const toolArgs = typeof toolArgsRaw === 'object' && toolArgsRaw !== null ? toolArgsRaw as Record<string, unknown> : {};
+            const parseStringOrArray = (v: unknown): string[] | undefined => {
+              if (Array.isArray(v)) return v.filter((x): x is string => typeof x === 'string');
+              if (typeof v === 'string') {
+                try {
+                  const parsed = JSON.parse(v);
+                  return Array.isArray(parsed) ? parsed.filter((x: unknown): x is string => typeof x === 'string') : v.split(/[,;]/).map((s: string) => s.trim()).filter(Boolean);
+                } catch {
+                  return v.split(/[,;]/).map((s: string) => s.trim()).filter(Boolean);
+                }
+              }
+              return undefined;
+            };
+            filters = {
+              dateStart: typeof toolArgs.dateStart === 'string' ? toolArgs.dateStart : undefined,
+              dateEnd: typeof toolArgs.dateEnd === 'string' ? toolArgs.dateEnd : undefined,
+              isFree: toolArgs.isFree === true || toolArgs.isFree === false ? toolArgs.isFree : null,
+              isAccessible: toolArgs.isAccessible === true || toolArgs.isAccessible === false ? toolArgs.isAccessible : null,
+              themes: parseStringOrArray(toolArgs.themes),
+              categories: parseStringOrArray(toolArgs.categories),
+              keywords: parseStringOrArray(toolArgs.keywords),
+            };
+            console.log('[AI Search] Extracted filters from tool call:', filters);
+          } catch (parseError) {
+            console.error('[AI Search] Failed to parse tool arguments:', parseError);
+            filters = { keywords: query.split(/\s+/).filter(w => w.length > 2) };
+          }
+        }
+      } else {
+        // No tool call - model responded directly (e.g. non-event question or redirect)
+        console.log('[AI Search] No tool call - model responded directly');
+        if (responseAny.text) {
+          const rawText = String(responseAny.text).trim();
+          // Ignore "tool plan" text (model explaining it would call the tool) so we don't show it as the reply
+          const isToolPlan = /I will use the|I'll use the|filter_events|extract_event_filters|I will search|I'll search/i.test(rawText);
+          
+          // Validate text quality - check for corruption patterns (repeating text, date format spam, etc.)
+          const isCorrupted = 
+            rawText.length > 500 || // Too long
+            /(.)\1{10,}/.test(rawText) || // Repeating characters
+            /DD-DD-DD/.test(rawText) || // Date format spam
+            /I'm looking for.*I'm looking for.*I'm looking for/.test(rawText) || // Repeating phrases
+            rawText.split(' ').length > 200; // Too many words
+            
+          if (!isToolPlan && !isCorrupted) {
+            conversationalResponse = rawText;
+          } else if (isCorrupted) {
+            console.warn('[AI Search] Detected corrupted response text, ignoring:', rawText.substring(0, 100));
+            // Fall back to keyword extraction for event queries
+            const isEventQuery = /event|show|concert|festival|exhibition|workshop|class|meeting|gathering|activity/i.test(query);
+            if (isEventQuery) {
+              filters = { keywords: query.split(/\s+/).filter(w => w.length > 2) };
+            }
+          }
+        }
+        
+        // If no filters set yet, use keyword extraction
+        if (!filters.dateStart && !filters.dateEnd && !filters.categories && !filters.themes && !filters.keywords) {
+          filters = { keywords: query.split(/\s+/).filter(w => w.length > 2) };
+        }
+      }
+
+      // Step 2: Generate conversational response with event results
+      // This will be done on the frontend after filtering events
+      // For now, we'll return the filters and let frontend generate the response
+      // OR we can generate it here if we have event results passed in
+
     } catch (apiError) {
       const cohereDuration = Date.now() - cohereStartTime;
       console.error('[AI Search] Cohere API call failed after', cohereDuration, 'ms:', apiError);
       if (apiError instanceof Error) {
         console.error('[AI Search] API Error message:', apiError.message);
         console.error('[AI Search] API Error stack:', apiError.stack);
-        console.error('[AI Search] API Error name:', apiError.name);
       }
-      // Return a more helpful error
-      return NextResponse.json(
-        { 
-          error: 'Cohere API call failed',
-          details: apiError instanceof Error ? apiError.message : 'Unknown API error',
-          // Fallback to keyword search
-          filters: {
-            keywords: query.split(/\s+/).filter(w => w.length > 2),
-          }
-        },
-        { status: 500 }
-      );
-    }
-    
-    // Chat API v2 might return text in different places - try multiple options
-    console.log('[AI Search] Extracting text from Cohere response...');
-    let generatedText = '{}';
-    if (response) {
-      console.log('[AI Search] Response type:', typeof response);
-      console.log('[AI Search] Response keys:', Object.keys(response || {}));
-      try {
-        // Try response.text first (most common)
-        if ('text' in response && response.text) {
-          generatedText = String(response.text).trim();
-          console.log('[AI Search] Found text in response.text, length:', generatedText.length);
-        }
-        // Try response.message?.text (some API versions)
-        else if ((response as any).message?.text) {
-          generatedText = String((response as any).message.text).trim();
-          console.log('[AI Search] Found text in response.message.text, length:', generatedText.length);
-        }
-        // Try response.message if it's a string
-        else if (typeof (response as any).message === 'string') {
-          generatedText = (response as any).message.trim();
-          console.log('[AI Search] Found text in response.message (string), length:', generatedText.length);
-        }
-        // Try accessing the first message in an array
-        else if (Array.isArray((response as any).messages) && (response as any).messages[0]?.text) {
-          generatedText = String((response as any).messages[0].text).trim();
-          console.log('[AI Search] Found text in response.messages[0].text, length:', generatedText.length);
-        }
-        // Try response.generations (legacy format)
-        else if (Array.isArray((response as any).generations) && (response as any).generations[0]?.text) {
-          generatedText = String((response as any).generations[0].text).trim();
-          console.log('[AI Search] Found text in response.generations[0].text, length:', generatedText.length);
-        } else {
-          console.warn('[AI Search] Could not find text in any expected location. Response structure:', JSON.stringify(response, null, 2).substring(0, 500));
-        }
-      } catch (accessError) {
-        console.error('[AI Search] Error accessing response properties:', accessError);
-      }
-    } else {
-      console.error('[AI Search] Response is null or undefined');
-    }
-    
-    if (!generatedText || generatedText === '{}') {
-      console.error('[AI Search] Could not extract text from Cohere response. Generated text:', generatedText);
-      console.error('[AI Search] Full response structure:', JSON.stringify(response, null, 2).substring(0, 1000));
-      // Fallback to keywords
-      console.log('[AI Search] Falling back to keyword search');
-      return NextResponse.json({
-        filters: {
-          keywords: query.split(/\s+/).filter(w => w.length > 2),
-        }
-      });
-    }
-    
-    console.log('[AI Search] Extracted text (first 200 chars):', generatedText.substring(0, 200));
-    
-    // Try to extract JSON from the response
-    let jsonMatch = generatedText.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      jsonMatch = generatedText.match(/```json\s*([\s\S]*?)\s*```/);
-      if (jsonMatch) {
-        jsonMatch[0] = jsonMatch[1];
-      }
+      // Return fallback filters
+      filters = { keywords: query.split(/\s+/).filter(w => w.length > 2) };
     }
 
-    const jsonText = jsonMatch ? jsonMatch[0] : generatedText;
-    console.log('[AI Search] JSON text to parse (first 200 chars):', jsonText.substring(0, 200));
-    
-    let filters: ExtractedFilters;
+    // Post-process to enhance date filters from relative phrases
+    console.log('[AI Search] Before enhancement:', JSON.stringify(filters));
+    filters = enhanceDateFilters(filters, query);
+    console.log('[AI Search] After enhancement:', JSON.stringify(filters));
 
-    try {
-      filters = JSON.parse(jsonText);
-      console.log('[AI Search] Successfully parsed JSON filters:', {
-        hasDateStart: !!filters.dateStart,
-        hasDateEnd: !!filters.dateEnd,
-        isFree: filters.isFree,
-        isAccessible: filters.isAccessible,
-        themesCount: filters.themes?.length || 0,
-        categoriesCount: filters.categories?.length || 0,
-        keywordsCount: filters.keywords?.length || 0,
-      });
-    } catch (parseError) {
-      console.error('[AI Search] Failed to parse Cohere response as JSON:', parseError);
-      console.error('[AI Search] JSON text that failed to parse:', jsonText);
-      // Return empty filters if parsing fails
-      filters = {
-        keywords: query.split(/\s+/).filter(w => w.length > 2),
-      };
-      console.log('[AI Search] Using fallback keyword filters');
-    }
-
-    // Validate and clean the filters
+    // Validate and clean the filters — only allow categories/themes that exist in the API
     let validatedFilters: ExtractedFilters = {
       dateStart: filters.dateStart && typeof filters.dateStart === 'string' ? filters.dateStart : undefined,
       dateEnd: filters.dateEnd && typeof filters.dateEnd === 'string' ? filters.dateEnd : undefined,
       isFree: filters.isFree === true || filters.isFree === false ? filters.isFree : null,
       isAccessible: filters.isAccessible === true || filters.isAccessible === false ? filters.isAccessible : null,
-      themes: Array.isArray(filters.themes) ? filters.themes.filter(t => typeof t === 'string') : undefined,
-      categories: Array.isArray(filters.categories) ? filters.categories.filter(c => typeof c === 'string') : undefined,
+      themes: Array.isArray(filters.themes)
+        ? filters.themes.filter((t): t is string => typeof t === 'string' && themesEnum.includes(t))
+        : undefined,
+      categories: Array.isArray(filters.categories)
+        ? filters.categories.filter((c): c is string => typeof c === 'string' && categoriesEnum.includes(c))
+        : undefined,
       keywords: Array.isArray(filters.keywords) ? filters.keywords.filter(k => typeof k === 'string' && k.length > 0) : undefined,
     };
-    
-    // Post-process to enhance date filters from relative phrases
-    console.log('[AI Search] Before enhancement:', JSON.stringify(validatedFilters));
-    validatedFilters = enhanceDateFilters(validatedFilters, query);
-    console.log('[AI Search] After enhancement:', JSON.stringify(validatedFilters));
 
     // If no filters extracted, use keywords from the query
     if (!validatedFilters.dateStart && !validatedFilters.dateEnd && 
@@ -441,10 +469,14 @@ JSON:`;
       themesCount: validatedFilters.themes?.length || 0,
       categoriesCount: validatedFilters.categories?.length || 0,
       keywordsCount: validatedFilters.keywords?.length || 0,
+      hasConversationalResponse: !!conversationalResponse,
     });
     
     return NextResponse.json(
-      { filters: validatedFilters },
+      { 
+        filters: validatedFilters,
+        response: conversationalResponse || undefined, // Include if model responded directly
+      },
       { headers }
     );
   } catch (error) {
