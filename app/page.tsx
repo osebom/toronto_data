@@ -9,6 +9,9 @@ import MapView from '@/components/map/MapView';
 import BottomFilters from '@/components/mobile/BottomFilters';
 import SearchBar from '@/components/mobile/SearchBar';
 import MapControls from '@/components/mobile/MapControls';
+import MobileSearchOverlay from '@/components/mobile/MobileSearchOverlay';
+import MobileSearchResultsSheet from '@/components/mobile/MobileSearchResultsSheet';
+import MobileEventDetailSheet from '@/components/mobile/MobileEventDetailSheet';
 import { loadEventsProgressive } from '@/lib/load-events-progressive';
 
 export default function Home() {
@@ -53,6 +56,9 @@ export default function Home() {
           <MapControls />
           <BottomFilters />
           <SearchBar />
+          <MobileSearchOverlay />
+          <MobileSearchResultsSheet />
+          <MobileEventDetailSheet />
         </div>
       ) : (
         // Desktop Layout - Sidebar + Map

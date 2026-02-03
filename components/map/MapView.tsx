@@ -20,7 +20,7 @@ export default function MapView({ mode }: MapViewProps) {
   const markersRef = useRef<any[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
   
-  const { filteredBrands, filteredPOIs, filteredEvents, events, isMobile, searchQuery, selectedFilter, selectedCategory, selectedEvent, selectedThemes, selectedDateRange, selectedCategories } = useStore();
+  const { filteredBrands, filteredPOIs, filteredEvents, events, isMobile, searchQuery, selectedFilter, selectedCategory, selectedEvent, setSelectedEvent, selectedThemes, selectedDateRange, selectedCategories, mobileResultsSheetOpen, mobileResultsTab, mobileSearchResults } = useStore();
 
   useEffect(() => {
     if (typeof window === 'undefined' || !mapContainer.current || map.current) return;
@@ -99,7 +99,12 @@ export default function MapView({ mode }: MapViewProps) {
 
     const filteredBrandsData = filteredBrands();
     const filteredPOIsData = filteredPOIs();
-    const filteredEventsData = filteredEvents();
+    const filteredEventsData =
+      mode === 'events' && isMobile && mobileResultsSheetOpen
+        ? mobileResultsTab === 'for-you'
+          ? mobileSearchResults
+          : filteredEvents()
+        : filteredEvents();
 
     if (mode === 'brands') {
       filteredBrandsData.forEach((brand) => {
@@ -118,14 +123,14 @@ export default function MapView({ mode }: MapViewProps) {
           markersRef.current.push(marker);
           // If this event is selected, open its popup
           if (selectedEvent?.id === event.id) {
-            marker.openPopup();
+            if (!isMobile) marker.openPopup();
             map.current?.setView([event.location.lat, event.location.lng], 15);
           }
         }
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoaded, mode, events, searchQuery, selectedFilter, selectedCategory, selectedEvent, selectedThemes, selectedDateRange, selectedCategories]);
+  }, [isLoaded, mode, events, searchQuery, selectedFilter, selectedCategory, selectedEvent, selectedThemes, selectedDateRange, selectedCategories, isMobile, mobileResultsSheetOpen, mobileResultsTab, mobileSearchResults]);
 
   // Resize map when container size changes
   useEffect(() => {
@@ -353,6 +358,10 @@ export default function MapView({ mode }: MapViewProps) {
       </div>
     `;
     marker.bindPopup(popupContent);
+
+    if (isMobile) {
+      marker.on('click', () => setSelectedEvent(event));
+    }
 
     return marker;
   };

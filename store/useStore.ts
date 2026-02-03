@@ -65,6 +65,20 @@ interface AppState {
   selectedEvent: Event | null;
   setSelectedEvent: (event: Event | null) => void;
   
+  // Mobile search
+  mobileSearchOpen: boolean;
+  setMobileSearchOpen: (open: boolean) => void;
+  mobileSearchResults: Event[];
+  setMobileSearchResults: (events: Event[]) => void;
+  mobileSearchStatus: 'idle' | 'searching' | 'done' | 'error';
+  setMobileSearchStatus: (status: 'idle' | 'searching' | 'done' | 'error') => void;
+  mobileSearchQuery: string;
+  setMobileSearchQuery: (query: string) => void;
+  mobileResultsSheetOpen: boolean;
+  setMobileResultsSheetOpen: (open: boolean) => void;
+  mobileResultsTab: 'for-you' | 'all';
+  setMobileResultsTab: (tab: 'for-you' | 'all') => void;
+  
   // Filtered data
   filteredBrands: () => Brand[];
   filteredPOIs: () => POI[];
@@ -118,6 +132,19 @@ export const useStore = create<AppState>((set, get) => ({
   
   selectedEvent: null,
   setSelectedEvent: (event) => set({ selectedEvent: event }),
+  
+  mobileSearchOpen: false,
+  setMobileSearchOpen: (open) => set({ mobileSearchOpen: open }),
+  mobileSearchResults: [],
+  setMobileSearchResults: (events) => set({ mobileSearchResults: events }),
+  mobileSearchStatus: 'idle',
+  setMobileSearchStatus: (status) => set({ mobileSearchStatus: status }),
+  mobileSearchQuery: '',
+  setMobileSearchQuery: (query) => set({ mobileSearchQuery: query }),
+  mobileResultsSheetOpen: false,
+  setMobileResultsSheetOpen: (open) => set({ mobileResultsSheetOpen: open }),
+  mobileResultsTab: 'for-you',
+  setMobileResultsTab: (tab) => set({ mobileResultsTab: tab }),
   
   filteredBrands: () => {
     const { brands, selectedFilter, searchQuery, selectedSort } = get();
