@@ -74,6 +74,10 @@ interface AppState {
   setMobileSearchStatus: (status: 'idle' | 'searching' | 'done' | 'error') => void;
   mobileSearchQuery: string;
   setMobileSearchQuery: (query: string) => void;
+  mobileSearchPreviousQuery: string | null;
+  setMobileSearchPreviousQuery: (query: string | null) => void;
+  mobileSearchContextActive: boolean;
+  setMobileSearchContextActive: (active: boolean) => void;
   mobileResultsSheetOpen: boolean;
   setMobileResultsSheetOpen: (open: boolean) => void;
   mobileResultsTab: 'for-you' | 'all';
@@ -141,6 +145,10 @@ export const useStore = create<AppState>((set, get) => ({
   setMobileSearchStatus: (status) => set({ mobileSearchStatus: status }),
   mobileSearchQuery: '',
   setMobileSearchQuery: (query) => set({ mobileSearchQuery: query }),
+  mobileSearchPreviousQuery: null,
+  setMobileSearchPreviousQuery: (query) => set({ mobileSearchPreviousQuery: query }),
+  mobileSearchContextActive: false,
+  setMobileSearchContextActive: (active) => set({ mobileSearchContextActive: active }),
   mobileResultsSheetOpen: false,
   setMobileResultsSheetOpen: (open) => set({ mobileResultsSheetOpen: open }),
   mobileResultsTab: 'for-you',

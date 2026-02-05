@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import { FiX } from 'react-icons/fi';
 import { useStore } from '@/store/useStore';
 import { useDraggableSheet } from '@/hooks/useDraggableSheet';
@@ -10,8 +9,6 @@ import { TORONTO_CENTER_LOCATION } from '@/lib/dummy-data';
 import { getThemeIcon } from '@/lib/event-metadata';
 import { getCategoryIcon } from '@/lib/category-icons';
 import React from 'react';
-
-type TabId = 'for-you' | 'all';
 
 interface EventCardProps {
   event: Event;
@@ -74,25 +71,36 @@ export default function MobileSearchResultsSheet() {
     mobileSearchQuery,
     mobileSearchResults,
     mobileSearchStatus,
-    mobileResultsTab,
-    setMobileResultsTab,
-    filteredEvents,
+    mobileSearchPreviousQuery,
+    mobileSearchContextActive,
+    setMobileSearchContextActive,
+    setMobileSearchPreviousQuery,
+    setSearchQuery,
     setSelectedEvent,
   } = useStore();
 
   const { heightVh, dragHandleProps } = useDraggableSheet(55);
-  const activeTab = mobileResultsTab;
-
-  const keywordEvents = filteredEvents();
-  const displayEvents = activeTab === 'for-you' ? mobileSearchResults : keywordEvents;
-
-  const setActiveTab = (tab: TabId) => setMobileResultsTab(tab);
+  const handleClose = () => {
+    setMobileResultsSheetOpen(false);
+    setSelectedEvent(null);
+    if (mobileSearchContextActive) {
+      setMobileSearchContextActive(false);
+    }
+    if (mobileSearchPreviousQuery !== null) {
+      setSearchQuery(mobileSearchPreviousQuery);
+      setMobileSearchPreviousQuery(null);
+    }
+  };
+  const handleSelect = (event: Event) => {
+    setSelectedEvent(event);
+    setMobileResultsSheetOpen(false);
+  };
 
   if (!mobileResultsSheetOpen) return null;
 
   const isSearching = mobileSearchStatus === 'searching';
   const isError = mobileSearchStatus === 'error';
-  const count = activeTab === 'for-you' ? mobileSearchResults.length : keywordEvents.length;
+  const count = mobileSearchResults.length;
 
   return (
     <div
@@ -118,7 +126,7 @@ export default function MobileSearchResultsSheet() {
         </span>
         <button
           type="button"
-          onClick={() => setMobileResultsSheetOpen(false)}
+          onClick={handleClose}
           className="p-2 -m-2 rounded-full text-gray-600 hover:bg-gray-100"
           aria-label="Close"
         >
@@ -139,43 +147,23 @@ export default function MobileSearchResultsSheet() {
       )}
       {mobileSearchStatus === 'done' && !isSearching && !isError && (
         <p className="px-4 pb-3 text-sm text-gray-600">
-          {count > 0
-            ? `✓ Found ${count} curated event${count !== 1 ? 's' : ''} for you.`
-            : 'Only found a couple spots — try a wider search or different keywords.'}
+          {`${count} event${count !== 1 ? 's' : ''} found`}
         </p>
       )}
       {isError && (
         <p className="px-4 pb-3 text-sm text-amber-600">Search failed. Try again or check your rate limit.</p>
       )}
 
-      {/* Tabs */}
-      <div className="flex gap-1 px-4 border-b border-gray-200">
-        {(['for-you', 'all'] as const).map((tab) => (
-          <button
-            key={tab}
-            type="button"
-            onClick={() => setActiveTab(tab)}
-            className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
-              activeTab === tab
-                ? 'border-gray-900 text-gray-900'
-                : 'border-transparent text-gray-500'
-            }`}
-          >
-            {tab === 'for-you' ? 'for you' : 'all'}
-          </button>
-        ))}
-      </div>
-
       {/* Result list */}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
-        {displayEvents.map((event) => (
+        {mobileSearchResults.map((event) => (
           <EventCard
             key={event.id}
             event={event}
-            onSelect={() => setSelectedEvent(event)}
+            onSelect={() => handleSelect(event)}
           />
         ))}
-        {!isSearching && displayEvents.length === 0 && (
+        {!isSearching && mobileSearchResults.length === 0 && (
           <p className="text-center text-gray-500 py-8 text-sm">No events match your search.</p>
         )}
       </div>

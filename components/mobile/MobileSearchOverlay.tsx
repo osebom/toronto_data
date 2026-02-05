@@ -23,10 +23,14 @@ export default function MobileSearchOverlay() {
     events,
     userLocation,
     mobileSearchOpen,
+    searchQuery,
+    mobileSearchPreviousQuery,
     setMobileSearchOpen,
     setMobileSearchQuery,
+    setMobileSearchPreviousQuery,
     setMobileSearchResults,
     setMobileSearchStatus,
+    setMobileSearchContextActive,
     setMobileResultsSheetOpen,
     setMobileResultsTab,
     setSearchQuery,
@@ -62,9 +66,13 @@ export default function MobileSearchOverlay() {
     }
 
     setErrorMessage(null);
+    if (mobileSearchPreviousQuery === null) {
+      setMobileSearchPreviousQuery(searchQuery);
+    }
     setMobileSearchQuery(trimmed);
     setSearchQuery(trimmed);
     setMobileSearchStatus('searching');
+    setMobileSearchContextActive(true);
     setMobileSearchOpen(false);
     setMobileResultsSheetOpen(true);
     setMobileResultsTab('for-you');
@@ -207,6 +215,16 @@ export default function MobileSearchOverlay() {
             </button>
           </div>
         </form>
+        <div className="mt-2 flex justify-end">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-gray-200 shadow-sm">
+            <span className="text-[11px] text-gray-500">powered by</span>
+            <img
+              src="/cohere-logo.png"
+              alt="Cohere"
+              className="h-4 w-auto"
+            />
+          </div>
+        </div>
       </div>
     </div>
   );

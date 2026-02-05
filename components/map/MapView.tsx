@@ -20,7 +20,7 @@ export default function MapView({ mode }: MapViewProps) {
   const markersRef = useRef<any[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
   
-  const { filteredBrands, filteredPOIs, filteredEvents, events, isMobile, searchQuery, selectedFilter, selectedCategory, selectedEvent, setSelectedEvent, selectedThemes, selectedDateRange, selectedCategories, mobileResultsSheetOpen, mobileResultsTab, mobileSearchResults } = useStore();
+  const { filteredBrands, filteredPOIs, filteredEvents, events, isMobile, searchQuery, selectedFilter, selectedCategory, selectedEvent, setSelectedEvent, selectedThemes, selectedDateRange, selectedCategories, mobileSearchContextActive, mobileSearchResults } = useStore();
 
   useEffect(() => {
     if (typeof window === 'undefined' || !mapContainer.current || map.current) return;
@@ -100,11 +100,11 @@ export default function MapView({ mode }: MapViewProps) {
     const filteredBrandsData = filteredBrands();
     const filteredPOIsData = filteredPOIs();
     const filteredEventsData =
-      mode === 'events' && isMobile && mobileResultsSheetOpen
-        ? mobileResultsTab === 'for-you'
+      mode === 'events' && isMobile && selectedEvent
+        ? [selectedEvent]
+        : mode === 'events' && isMobile && mobileSearchContextActive
           ? mobileSearchResults
-          : filteredEvents()
-        : filteredEvents();
+          : filteredEvents();
 
     if (mode === 'brands') {
       filteredBrandsData.forEach((brand) => {
@@ -130,7 +130,7 @@ export default function MapView({ mode }: MapViewProps) {
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoaded, mode, events, searchQuery, selectedFilter, selectedCategory, selectedEvent, selectedThemes, selectedDateRange, selectedCategories, isMobile, mobileResultsSheetOpen, mobileResultsTab, mobileSearchResults]);
+  }, [isLoaded, mode, events, searchQuery, selectedFilter, selectedCategory, selectedEvent, selectedThemes, selectedDateRange, selectedCategories, isMobile, mobileSearchContextActive, mobileSearchResults]);
 
   // Resize map when container size changes
   useEffect(() => {

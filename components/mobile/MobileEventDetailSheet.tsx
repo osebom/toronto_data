@@ -11,7 +11,14 @@ import { getCategoryIcon } from '@/lib/category-icons';
 import { useDraggableSheet } from '@/hooks/useDraggableSheet';
 
 export default function MobileEventDetailSheet() {
-  const { selectedEvent, setSelectedEvent, userLocation, isMobile, mobileResultsSheetOpen } = useStore();
+  const {
+    selectedEvent,
+    setSelectedEvent,
+    userLocation,
+    isMobile,
+    mobileSearchContextActive,
+    setMobileResultsSheetOpen,
+  } = useStore();
   const { heightVh, dragHandleProps } = useDraggableSheet(55);
 
   if (!selectedEvent || !isMobile) return null;
@@ -22,7 +29,7 @@ export default function MobileEventDetailSheet() {
   const mapsUrl = event.locationAddress
     ? `https://www.google.com/maps?q=${encodeURIComponent(event.locationAddress)}`
     : `https://www.google.com/maps?q=${event.location.lat},${event.location.lng}`;
-  const fromSearch = mobileResultsSheetOpen;
+  const fromSearch = mobileSearchContextActive;
 
   const formatEventDate = (dateString: string): string => {
     try {
@@ -53,6 +60,10 @@ export default function MobileEventDetailSheet() {
   };
 
   const handleClose = () => setSelectedEvent(null);
+  const handleBackToSearch = () => {
+    setSelectedEvent(null);
+    setMobileResultsSheetOpen(true);
+  };
 
   const CategoryIcon = getCategoryIcon(event.categories || []);
   const themeEmoji = event.themes?.[0] ? getThemeIcon(event.themes[0]) : null;
@@ -79,7 +90,7 @@ export default function MobileEventDetailSheet() {
         {fromSearch ? (
           <button
             type="button"
-            onClick={handleClose}
+            onClick={handleBackToSearch}
             className="flex items-center gap-1 p-2 -m-2 rounded-full text-gray-700 hover:bg-gray-100"
             aria-label="Back"
           >
@@ -104,10 +115,10 @@ export default function MobileEventDetailSheet() {
         {/* Event icon + name row */}
         <div className="px-4 pb-3 flex items-start gap-3">
           <div className="w-14 h-14 rounded-full flex-shrink-0 flex items-center justify-center bg-white border border-gray-200 shadow-sm">
-            {themeEmoji ? (
-              <span className="text-2xl">{themeEmoji}</span>
-            ) : CategoryIcon ? (
+            {CategoryIcon ? (
               <CategoryIcon className="text-gray-600" size={28} />
+            ) : themeEmoji ? (
+              <span className="text-2xl">{themeEmoji}</span>
             ) : (
               <span className="text-2xl text-gray-400">📅</span>
             )}
@@ -117,7 +128,6 @@ export default function MobileEventDetailSheet() {
             <div className="flex items-center gap-2 mt-2 flex-wrap">
               {event.categories?.[0] && (
                 <span className="flex items-center gap-1 text-sm text-gray-600">
-                  {themeEmoji ? <span>{themeEmoji}</span> : null}
                   <span>{event.categories[0]}</span>
                 </span>
               )}
@@ -191,11 +201,11 @@ export default function MobileEventDetailSheet() {
         </div>
 
         {/* Actions */}
-        <div className="flex gap-3 px-4 pb-6">
+        <div className="grid grid-cols-2 gap-3 px-4 pb-6">
           <button
             type="button"
             onClick={handleShare}
-            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border border-gray-200 text-gray-700 font-medium hover:bg-gray-50"
+            className="h-12 flex items-center justify-center gap-2 px-3 rounded-xl border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 text-sm whitespace-nowrap"
           >
             <FiShare2 size={18} />
             share
@@ -204,7 +214,7 @@ export default function MobileEventDetailSheet() {
             href={mapsUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-gray-900 text-white font-medium hover:bg-gray-800"
+            className="h-12 flex items-center justify-center gap-2 px-3 rounded-xl bg-gray-900 text-white font-medium hover:bg-gray-800 text-sm whitespace-nowrap"
           >
             <FiMapPin size={18} />
             directions · {formatDistance(distance)}
@@ -214,7 +224,7 @@ export default function MobileEventDetailSheet() {
               href={event.website}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl border border-gray-200 text-gray-700 font-medium hover:bg-gray-50"
+              className="h-12 flex items-center justify-center gap-2 px-3 rounded-xl border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 text-sm whitespace-nowrap"
             >
               <FiExternalLink size={18} />
             </a>
@@ -222,7 +232,7 @@ export default function MobileEventDetailSheet() {
           {event.telephone && (
             <a
               href={`tel:${event.telephone}`}
-              className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl border border-gray-200 text-gray-700 font-medium hover:bg-gray-50"
+              className="h-12 flex items-center justify-center gap-2 px-3 rounded-xl border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 text-sm whitespace-nowrap"
             >
               <FiPhone size={18} />
             </a>
