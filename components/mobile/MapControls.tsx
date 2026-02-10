@@ -1,14 +1,56 @@
 'use client';
 
 import { FiNavigation } from 'react-icons/fi';
+import { useStore } from '@/store/useStore';
+import { Location } from '@/types';
 
 export default function MapControls() {
+  const { setUserLocation } = useStore();
+
+  const LAST_PROMPT_KEY = 'userLocationLastPrompt';
+  const LOCATION_CACHE_KEY = 'userLocationCache';
+  const FOUR_DAYS_MS = 4 * 24 * 60 * 60 * 1000;
+
   const handleCurrentLocation = () => {
+    if (typeof window === 'undefined') return;
     if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition((position) => {
-        // Location will be handled by useGeolocation hook
-        // This is just for centering the map
-      });
+      const lastPromptRaw = window.localStorage.getItem(LAST_PROMPT_KEY);
+      const lastPrompt = lastPromptRaw ? Number(lastPromptRaw) : 0;
+      const now = Date.now();
+
+      if (lastPrompt && now - lastPrompt < FOUR_DAYS_MS) {
+        const cached = window.localStorage.getItem(LOCATION_CACHE_KEY);
+        if (cached) {
+          try {
+            const parsed = JSON.parse(cached) as { lat: number; lng: number };
+            const location: Location = { lat: parsed.lat, lng: parsed.lng };
+            setUserLocation(location);
+          } catch {
+            // Ignore malformed cache
+          }
+        }
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const location: Location = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          };
+          setUserLocation(location);
+          window.localStorage.setItem(LAST_PROMPT_KEY, String(now));
+          window.localStorage.setItem(LOCATION_CACHE_KEY, JSON.stringify(location));
+        },
+        (error) => {
+          console.error('Error getting user location:', error);
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 300000,
+        }
+      );
     }
   };
 
@@ -23,4 +65,3 @@ export default function MapControls() {
     </div>
   );
 }
-

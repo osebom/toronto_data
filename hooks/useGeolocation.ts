@@ -8,30 +8,15 @@ export function useGeolocation() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    // Check if geolocation is supported
-    if (!navigator.geolocation) {
-      return;
-    }
+    const cached = window.localStorage.getItem('userLocationCache');
+    if (!cached) return;
 
-    // Get user's current position
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const location: Location = {
-          lat: position.coords.latitude,
-          lng: position.coords.longitude,
-        };
-        setUserLocation(location);
-      },
-      (error) => {
-        console.error('Error getting user location:', error);
-        // Don't set location on error - will fall back to Toronto center
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 300000, // Cache for 5 minutes
-      }
-    );
+    try {
+      const parsed = JSON.parse(cached) as { lat: number; lng: number };
+      const location: Location = { lat: parsed.lat, lng: parsed.lng };
+      setUserLocation(location);
+    } catch {
+      // Ignore malformed cache
+    }
   }, [setUserLocation]);
 }
-
