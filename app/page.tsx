@@ -61,11 +61,13 @@ export default function Home() {
           <MobileEventDetailSheet />
         </div>
       ) : (
-        // Desktop Layout - Sidebar + Map
-        <div className="flex h-screen w-screen">
-          <Sidebar />
-          <div className="flex-1 relative h-full">
+        // Desktop Layout - Full-screen map with sidebar overlay (for liquid blur)
+        <div className="relative h-screen w-screen">
+          <div className="absolute inset-0">
             <MapView mode={mapMode} />
+          </div>
+          <div className="absolute left-2 top-2 bottom-2 z-10 w-[calc(100%-1rem)] max-w-[420px] lg:w-1/3 lg:max-w-none rounded-3xl overflow-hidden shadow-2xl">
+            <Sidebar />
           </div>
         </div>
       )}

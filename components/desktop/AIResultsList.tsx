@@ -42,26 +42,26 @@ export default function AIResultsList({ events }: AIResultsListProps) {
 
   if (events.length === 0) {
     return (
-      <div className="text-center text-gray-400 py-8 text-sm">
+      <div className="text-center text-white py-8 text-sm">
         No events found matching your criteria
       </div>
     );
   }
 
   return (
-    <div className="p-4 space-y-3">
+    <div className="space-y-3">
       {events.map((event) => (
         <div
           key={event.id}
           onClick={() => setSelectedEvent(event)}
-          className={`flex items-start gap-3 p-3 rounded-lg cursor-pointer transition-colors ${
+          className={`flex items-start gap-3 p-3 rounded-xl cursor-pointer transition-colors border ${
             selectedEvent?.id === event.id
-              ? 'bg-green-500/20 border border-green-500'
-              : 'bg-dark-card hover:bg-gray-700'
+              ? 'bg-emerald-500/20 border-emerald-500/60'
+              : 'bg-white/5 border-white/10 hover:bg-white/10'
           }`}
         >
           {/* Event Icon */}
-          <div className="relative w-12 h-12 rounded-full bg-white border border-gray-300 flex items-center justify-center flex-shrink-0 shadow-sm">
+          <div className="relative w-12 h-12 rounded-full bg-white/90 border border-white/20 flex items-center justify-center flex-shrink-0 shadow-sm">
             {(() => {
               const Icon = getEventIconComponent(event);
               if (Icon) {
@@ -82,12 +82,12 @@ export default function AIResultsList({ events }: AIResultsListProps) {
           {/* Event Info */}
           <div className="flex-1 min-w-0">
             <h3 className="text-white font-medium truncate">{event.name}</h3>
-            <div className="flex items-center gap-2 text-sm text-gray-400 mt-1">
+            <div className="flex items-center gap-2 text-sm text-white mt-1">
               <span className="truncate">{event.locationName}</span>
               <span>•</span>
               <span>{formatDistance(calculateDistanceMiles(referenceLocation, event.location))}</span>
             </div>
-            <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
+            <div className="flex items-center gap-2 text-xs text-white/90 mt-1">
               <span>{formatEventDate(event.startDate)}</span>
               {event.startDate !== event.endDate && (
                 <>
@@ -101,7 +101,7 @@ export default function AIResultsList({ events }: AIResultsListProps) {
                 {event.categories.slice(0, 2).map((category, idx) => (
                   <span
                     key={idx}
-                    className="text-xs px-2 py-0.5 bg-gray-700 text-gray-300 rounded"
+                    className="text-xs px-2 py-0.5 bg-white/10 text-white rounded-md"
                   >
                     {category}
                   </span>
@@ -111,7 +111,7 @@ export default function AIResultsList({ events }: AIResultsListProps) {
 
             {event.shortDescription && (
               <p
-                className="text-xs text-gray-400 mt-2"
+                className="text-xs text-white/90 mt-2"
                 style={{
                   display: '-webkit-box',
                   WebkitBoxOrient: 'vertical',

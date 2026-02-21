@@ -40,19 +40,19 @@ export default function EventList() {
   };
 
   return (
-    <div className="p-4 space-y-3">
+    <div className="space-y-3">
       {events.map((event) => (
         <div
           key={event.id}
           onClick={() => setSelectedEvent(event)}
-          className={`flex items-start gap-3 p-3 rounded-lg cursor-pointer transition-colors ${
+          className={`flex items-start gap-3 p-3 rounded-xl cursor-pointer transition-colors border ${
             selectedEvent?.id === event.id
-              ? 'bg-green-500/20 border border-green-500'
-              : 'bg-dark-card hover:bg-gray-700'
+              ? 'bg-emerald-500/20 border-emerald-500/60'
+              : 'bg-white/5 border-white/10 hover:bg-white/10'
           }`}
         >
           {/* Event Icon */}
-          <div className="relative w-12 h-12 rounded-full bg-white border border-gray-300 flex items-center justify-center flex-shrink-0 shadow-sm">
+          <div className="relative w-12 h-12 rounded-full bg-white/90 border border-white/20 flex items-center justify-center flex-shrink-0 shadow-sm">
             {(() => {
               const Icon = getEventIconComponent(event);
               if (Icon) {
@@ -73,12 +73,12 @@ export default function EventList() {
           {/* Event Info */}
           <div className="flex-1 min-w-0">
             <h3 className="text-white font-medium truncate">{event.name}</h3>
-            <div className="flex items-center gap-2 text-sm text-gray-400 mt-1">
+            <div className="flex items-center gap-2 text-sm text-white mt-1">
               <span className="truncate">{event.locationName}</span>
               <span>•</span>
               <span>{formatDistance(calculateDistanceMiles(referenceLocation, event.location))}</span>
             </div>
-            <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
+            <div className="flex items-center gap-2 text-xs text-white/90 mt-1">
               <span>{formatEventDate(event.startDate)}</span>
               {event.startDate !== event.endDate && (
                 <>
@@ -92,7 +92,7 @@ export default function EventList() {
                 {event.categories.slice(0, 2).map((category, idx) => (
                   <span
                     key={idx}
-                    className="text-xs px-2 py-0.5 bg-gray-700 text-gray-300 rounded"
+                    className="text-xs px-2 py-0.5 bg-white/10 text-white rounded-md"
                   >
                     {category}
                   </span>
@@ -102,7 +102,7 @@ export default function EventList() {
 
             {event.shortDescription && (
               <p
-                className="text-xs text-gray-400 mt-2"
+                className="text-xs text-white/90 mt-2"
                 style={{
                   display: '-webkit-box',
                   WebkitBoxOrient: 'vertical',
@@ -133,7 +133,7 @@ export default function EventList() {
                 {event.features.slice(0, 3).map((feature) => (
                   <span
                     key={feature}
-                    className="text-xs px-2 py-0.5 bg-gray-800 text-gray-200 rounded flex items-center gap-1"
+                    className="text-xs px-2 py-0.5 bg-white/10 text-white rounded-md flex items-center gap-1"
                   >
                     <span>{getFeatureIcon(feature)}</span>
                     {feature}
@@ -165,10 +165,10 @@ export default function EventList() {
             )}
 
             {event.partnerships && event.partnerships.length > 0 && (
-              <div className="text-[11px] text-gray-400 mt-2 space-y-0.5">
+              <div className="text-[11px] text-white/90 mt-2 space-y-0.5">
                 {event.partnerships.map((partner, idx) => (
                   <div key={`${partner.name}-${idx}`}>
-                    <span className="text-gray-500">{partner.role}:</span> {partner.name}
+                    <span className="text-white/80">{partner.role}:</span> {partner.name}
                   </div>
                 ))}
               </div>
@@ -191,13 +191,13 @@ export default function EventList() {
       ))}
 
       {events.length === 0 && !isLoadingEvents && (
-        <div className="text-center text-gray-400 py-8">
+        <div className="text-center text-white py-8">
           No events found
         </div>
       )}
 
       {isLoadingEvents && (
-        <div className="mt-4 p-4 bg-dark-card border border-gray-700 rounded-lg">
+        <div className="mt-4 p-4 bg-white/5 border border-white/10 rounded-xl">
           <div className="flex items-center gap-3">
             <div className="flex gap-1">
               <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" style={{ animationDelay: '0ms' }} />
@@ -205,16 +205,16 @@ export default function EventList() {
               <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" style={{ animationDelay: '300ms' }} />
             </div>
             <div className="flex-1">
-              <div className="text-sm text-gray-300 font-medium">
+              <div className="text-sm text-white font-medium">
                 Loading more events...
               </div>
               {totalEventsCount > 0 && (
-                <div className="text-xs text-gray-500 mt-1">
+                <div className="text-xs text-white/90 mt-1">
                   {eventsLoadedCount} of {totalEventsCount} loaded
                 </div>
               )}
               {totalEventsCount > 0 && (
-                <div className="mt-2 w-full bg-gray-700 rounded-full h-1.5 overflow-hidden">
+                <div className="mt-2 w-full bg-white/10 rounded-full h-1.5 overflow-hidden">
                   <div
                     className="h-full bg-emerald-500 rounded-full transition-all duration-300 ease-out"
                     style={{ width: `${Math.min((eventsLoadedCount / totalEventsCount) * 100, 100)}%` }}
@@ -227,7 +227,7 @@ export default function EventList() {
       )}
 
       {!isLoadingEvents && totalEventsCount > 0 && eventsLoadedCount === totalEventsCount && events.length > 0 && (
-        <div className="mt-4 p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-lg">
+        <div className="mt-4 p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl">
           <div className="flex items-center gap-2 text-sm text-emerald-300">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />

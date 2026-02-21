@@ -366,9 +366,9 @@ export default function Sidebar() {
   const isChatDisabled = assistantResponseCount >= MAX_ASSISTANT_RESPONSES;
 
   return (
-    <div className="w-full lg:w-1/3 bg-dark-sidebar h-screen flex flex-col overflow-visible">
+    <div className="h-full w-full flex flex-col overflow-hidden bg-dark-sidebar/70 backdrop-blur-2xl backdrop-saturate-150 rounded-3xl border border-white/10">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-700">
+      <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
         <div className="flex items-center gap-2">
           <div className="w-9 h-9 rounded-full bg-white border border-white/60 flex items-center justify-center overflow-hidden shadow-sm">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -380,25 +380,25 @@ export default function Sidebar() {
           </div>
           <span className="text-white font-semibold">event buddy</span>
         </div>
-        <button className="text-white hover:text-gray-300">
+        <button className="text-white hover:text-white/80">
           <FiInfo size={20} />
         </button>
       </div>
 
       {/* Search Bar */}
-      <div className="p-4 border-b border-gray-700 space-y-3">
-        <div className="flex items-center gap-2 text-gray-300 text-sm">
-          <span className="uppercase tracking-wide text-[11px] text-gray-500">Search mode</span>
-          <div className="flex gap-2 bg-dark-card border border-gray-700 rounded-lg p-1">
+      <div className="px-5 py-4 border-b border-white/10 space-y-3">
+        <div className="flex items-center gap-2 text-white text-sm">
+          <span className="uppercase tracking-wider text-[11px] text-white/80">Search mode</span>
+          <div className="flex gap-1.5 bg-white/5 border border-white/10 rounded-xl p-1">
             <button
               onClick={() => {
                 setSearchMode('keyword');
                 setAiResults([]);
               }}
-              className={`px-3 py-1.5 text-xs rounded-md transition-colors ${
+              className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${
                 searchMode === 'keyword'
                   ? 'bg-emerald-500 text-white'
-                  : 'text-gray-300 hover:bg-gray-700'
+                  : 'text-white hover:bg-white/10'
               }`}
             >
               Keyword
@@ -408,10 +408,10 @@ export default function Sidebar() {
                 setSearchMode('ai');
                 setAiResults([]);
               }}
-              className={`px-3 py-1.5 text-xs rounded-md transition-colors flex items-center gap-1.5 ${
+              className={`px-3 py-1.5 text-xs rounded-lg transition-colors flex items-center gap-1.5 ${
                 searchMode === 'ai'
                   ? 'bg-indigo-500 text-white'
-                  : 'text-gray-300 hover:bg-gray-700'
+                  : 'text-white hover:bg-white/10'
               }`}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -435,19 +435,19 @@ export default function Sidebar() {
               placeholder="Search..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-dark-card text-white placeholder-gray-400 px-4 py-2 pr-10 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="w-full bg-white/5 text-white placeholder-white/60 px-4 py-2.5 pr-10 rounded-xl border border-white/10 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50"
             />
-            <FiSearch className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+            <FiSearch className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/80" size={18} />
           </div>
         ) : (
-          <div className="bg-dark-card border border-gray-700 rounded-lg p-3 space-y-3">
-            <div className="flex items-center justify-between text-xs text-gray-300">
+          <div className="bg-white/5 border border-white/10 rounded-xl p-3 space-y-3">
+            <div className="flex items-center justify-between text-xs text-white">
               <div className="flex items-center gap-2">
-                <FiSearch size={14} className="text-gray-400" />
+                <FiSearch size={14} className="text-white/80" />
                 <span>AI search</span>
               </div>
-              <div className="flex items-center gap-1.5 text-[10px] text-gray-400">
-                <span className={rateLimitStatus.remaining === 0 ? 'text-amber-400' : 'text-gray-400'}>
+              <div className="flex items-center gap-1.5 text-[10px] text-white/90">
+                <span className={rateLimitStatus.remaining === 0 ? 'text-amber-400' : 'text-white/90'}>
                   {rateLimitStatus.remaining} / 4 messages
                 </span>
                 {rateLimitStatus.remaining === 0 && (
@@ -455,14 +455,14 @@ export default function Sidebar() {
                 )}
               </div>
             </div>
-            <div ref={chatRef} className="bg-black/30 border border-gray-700 rounded-lg p-3 space-y-3 h-56 overflow-y-auto">
+            <div ref={chatRef} className="bg-black/20 border border-white/10 rounded-xl p-3 space-y-3 h-56 overflow-y-auto">
               {chatMessages.map((msg, idx) => (
                 <div key={`${msg.sender}-${idx}`} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
                   <div
                     className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm leading-snug shadow-sm border whitespace-pre-wrap ${
                       msg.sender === 'user'
                         ? 'bg-indigo-600 text-white border-indigo-500'
-                        : 'bg-gray-800 text-gray-100 border-gray-700'
+                        : 'bg-white/10 text-white border-white/10'
                     }`}
                   >
                     {msg.text}
@@ -471,13 +471,13 @@ export default function Sidebar() {
               ))}
               {isTyping && (
                 <div className="flex justify-start">
-                  <div className="flex items-center gap-2 rounded-2xl px-3 py-2 text-sm leading-snug shadow-sm border bg-gray-800 text-gray-100 border-gray-700">
+                  <div className="flex items-center gap-2 rounded-2xl px-3 py-2 text-sm leading-snug shadow-sm border bg-white/10 text-white border-white/10">
                     <span className="flex gap-1">
                       <span className="w-2 h-2 rounded-full bg-gray-500 animate-pulse" />
                       <span className="w-2 h-2 rounded-full bg-gray-500 animate-pulse delay-150" />
                       <span className="w-2 h-2 rounded-full bg-gray-500 animate-pulse delay-300" />
                     </span>
-                    <span className="text-xs text-gray-400">Finding events…</span>
+                    <span className="text-xs text-white">Finding events…</span>
                   </div>
                 </div>
               )}
@@ -501,7 +501,7 @@ export default function Sidebar() {
                   await handleAISearch(text);
                 }}
               >
-                <div className="flex items-center gap-2 bg-black/40 border border-gray-700 rounded-full px-3 py-2">
+                <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-3 py-2">
                   <textarea
                     placeholder={
                       isChatDisabled 
@@ -531,7 +531,7 @@ export default function Sidebar() {
                         await handleAISearch(text);
                       }
                     }}
-                    className="w-full bg-transparent text-white placeholder-gray-500 px-1 py-1 focus:outline-none resize-none text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full bg-transparent text-white placeholder-white/60 px-1 py-1 focus:outline-none resize-none text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                     rows={1}
                   />
                   <button
@@ -543,7 +543,7 @@ export default function Sidebar() {
                   </button>
                 </div>
               </form>
-              <div className="flex items-center justify-between text-[11px] text-gray-500">
+              <div className="flex items-center justify-between text-[11px] text-white/80">
                 <span>AI will search events and show results below. Results accuracy may vary.</span>
                 {isChatDisabled && (
                   <span className="text-amber-400 font-semibold">
@@ -558,25 +558,25 @@ export default function Sidebar() {
 
       {searchMode === 'keyword' && (
         /* Filters - compact */
-        <div className="p-3 border-b border-gray-700 space-y-2 bg-dark-sidebar/60">
-          <div className="flex items-center gap-2 text-gray-200 text-sm">
-            <FiFilter size={16} className="text-gray-400" />
+        <div className="px-5 py-3 border-b border-white/10 space-y-2">
+          <div className="flex items-center gap-2 text-white text-sm">
+            <FiFilter size={16} className="text-white/80" />
             <span>Filters</span>
           </div>
 
           <div className="flex flex-wrap gap-2">
             {/* Price filter */}
-            <div className="flex items-center gap-2 bg-dark-card border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-gray-200">
-              <span className="text-gray-400">Price</span>
+            <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-2 py-1.5 text-xs text-white">
+              <span className="text-white/90">Price</span>
               <div className="flex gap-1">
                 {(['all', 'free', 'paid', 'accessible'] as const).map((option) => (
                   <button
                     key={option}
                     onClick={() => setSelectedFilter(option)}
-                    className={`px-2 py-1 rounded-md capitalize transition-colors ${
+                    className={`px-2 py-1 rounded-lg capitalize transition-colors ${
                       selectedFilter === option
                         ? 'bg-emerald-500 text-white'
-                        : 'bg-black/40 text-gray-300 hover:bg-gray-700'
+                        : 'bg-white/5 text-white hover:bg-white/10'
                     }`}
                   >
                     {option === 'all' ? 'All' : option}
@@ -589,15 +589,15 @@ export default function Sidebar() {
             <div className="relative">
               <button
                 onClick={() => setShowDatePanel((open) => !open)}
-                className="flex items-center gap-2 bg-dark-card border border-gray-700 rounded-lg px-3 py-1.5 text-xs text-gray-200 hover:border-gray-500 transition-colors"
+                className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white hover:border-white/20 transition-colors"
               >
-                <FiCalendar size={14} className="text-gray-400" />
+                <FiCalendar size={14} className="text-white/80" />
                 <span className="truncate max-w-[120px]">{dateSummary}</span>
-                <FiChevronDown size={12} className="text-gray-400" />
+                <FiChevronDown size={12} className="text-white/80" />
               </button>
               {showDatePanel && (
-                <div className="absolute z-20 mt-2 w-72 bg-dark-card border border-gray-700 rounded-lg p-3 shadow-xl space-y-3">
-                  <div className="flex items-center justify-between text-xs text-gray-200">
+                <div className="absolute z-20 mt-2 w-72 bg-dark-sidebar/95 backdrop-blur-xl border border-white/10 rounded-xl p-3 shadow-xl space-y-3">
+                  <div className="flex items-center justify-between text-xs text-white">
                     <span className="flex items-center gap-2">
                       <FiCalendar size={14} />
                       <span>Date range</span>
@@ -605,7 +605,7 @@ export default function Sidebar() {
                     {(selectedDateRange.start || selectedDateRange.end) && (
                       <button
                         onClick={clearDates}
-                        className="text-gray-400 hover:text-white flex items-center gap-1"
+                        className="text-white/80 hover:text-white flex items-center gap-1"
                       >
                         <FiX size={12} />
                         Clear
@@ -618,7 +618,7 @@ export default function Sidebar() {
                       className={`px-2 py-1.5 rounded-lg text-xs transition-colors ${
                         selectedPreset === 'today'
                           ? 'bg-emerald-500 text-white'
-                          : 'bg-black/40 text-gray-200 hover:bg-gray-700'
+                          : 'bg-white/5 text-white hover:bg-white/10'
                       }`}
                     >
                       Today
@@ -628,7 +628,7 @@ export default function Sidebar() {
                       className={`px-2 py-1.5 rounded-lg text-xs transition-colors ${
                         selectedPreset === 'weekend'
                           ? 'bg-emerald-500 text-white'
-                          : 'bg-black/40 text-gray-200 hover:bg-gray-700'
+                          : 'bg-white/5 text-white hover:bg-white/10'
                       }`}
                     >
                       Weekend
@@ -638,15 +638,15 @@ export default function Sidebar() {
                       className={`px-2 py-1.5 rounded-lg text-xs transition-colors ${
                         selectedPreset === 'next30'
                           ? 'bg-emerald-500 text-white'
-                          : 'bg-black/40 text-gray-200 hover:bg-gray-700'
+                          : 'bg-white/5 text-white hover:bg-white/10'
                       }`}
                     >
                       Next 30d
                     </button>
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-xs">
-                    <label className="flex flex-col gap-1 text-gray-400">
-                      <span className="text-[10px] uppercase tracking-wide text-gray-500">From</span>
+                    <label className="flex flex-col gap-1 text-white">
+                      <span className="text-[10px] uppercase tracking-wide text-white/80">From</span>
                       <input
                         type="date"
                         value={selectedDateRange.start || ''}
@@ -657,11 +657,11 @@ export default function Sidebar() {
                           })
                         }
                         onFocus={() => setSelectedPreset(null)}
-                        className="w-full bg-black/30 text-white px-2 py-2 rounded-lg border border-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500/50 focus:border-green-500/60 placeholder-gray-500"
+                        className="w-full bg-white/5 text-white px-2 py-2 rounded-lg border border-white/10 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 placeholder-white/60"
                       />
                     </label>
-                    <label className="flex flex-col gap-1 text-gray-400">
-                      <span className="text-[10px] uppercase tracking-wide text-gray-500">To</span>
+                    <label className="flex flex-col gap-1 text-white">
+                      <span className="text-[10px] uppercase tracking-wide text-white/80">To</span>
                       <input
                         type="date"
                         value={selectedDateRange.end || ''}
@@ -672,11 +672,11 @@ export default function Sidebar() {
                           })
                         }
                         onFocus={() => setSelectedPreset(null)}
-                        className="w-full bg-black/30 text-white px-2 py-2 rounded-lg border border-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500/50 focus:border-green-500/60 placeholder-gray-500"
+                        className="w-full bg-white/5 text-white px-2 py-2 rounded-lg border border-white/10 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 placeholder-white/60"
                       />
                     </label>
                   </div>
-                  <div className="text-[11px] text-gray-400 flex items-center gap-2">
+                  <div className="text-[11px] text-white/90 flex items-center gap-2">
                     <div className="h-2 w-2 rounded-full bg-emerald-400/80 shadow-[0_0_0_3px_rgba(16,185,129,0.15)]" />
                     <span className="truncate">Showing: {dateSummary}</span>
                   </div>
@@ -689,19 +689,19 @@ export default function Sidebar() {
               <div className="relative">
                 <button
                   onClick={() => setShowCategoryPanel((open) => !open)}
-                  className="flex items-center gap-2 bg-dark-card border border-gray-700 rounded-lg px-3 py-1.5 text-xs text-gray-200 hover:border-gray-500 transition-colors"
+                  className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white hover:border-white/20 transition-colors"
                 >
-                  <span className="text-gray-400">Category</span>
+                  <span className="text-white/90">Category</span>
                   <span className="truncate max-w-[110px]">{categorySummary()}</span>
-                  <FiChevronDown size={12} className="text-gray-400" />
+                  <FiChevronDown size={12} className="text-white/80" />
                 </button>
                 {showCategoryPanel && (
-                  <div className="absolute z-20 mt-2 w-60 bg-dark-card border border-gray-700 rounded-lg p-3 shadow-xl space-y-2 max-h-64 overflow-y-auto">
-                    <div className="flex items-center justify-between text-xs text-gray-200">
+                  <div className="absolute z-20 mt-2 w-60 bg-dark-sidebar/95 backdrop-blur-xl border border-white/10 rounded-xl p-3 shadow-xl space-y-2 max-h-64 overflow-y-auto">
+                    <div className="flex items-center justify-between text-xs text-white">
                       <span>Categories</span>
                       <button
                         onClick={() => setSelectedCategories([])}
-                        className="text-gray-400 hover:text-white text-[11px]"
+                        className="text-white/80 hover:text-white text-[11px]"
                       >
                         Clear
                       </button>
@@ -714,7 +714,7 @@ export default function Sidebar() {
                           className={`px-2 py-1.5 rounded-md text-xs flex items-center gap-1 transition-colors ${
                             selectedCategories.includes(category)
                               ? 'bg-blue-500 text-white'
-                              : 'bg-black/40 text-gray-200 hover:bg-gray-700'
+                              : 'bg-white/5 text-white hover:bg-white/10'
                           }`}
                         >
                           <span className="truncate">{category}</span>
@@ -731,21 +731,21 @@ export default function Sidebar() {
               <div className="relative">
                 <button
                   onClick={() => setShowThemePanel((open) => !open)}
-                  className="flex items-center gap-2 bg-dark-card border border-gray-700 rounded-lg px-3 py-1.5 text-xs text-gray-200 hover:border-gray-500 transition-colors"
+                  className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white hover:border-white/20 transition-colors"
                 >
-                  <span className="text-gray-400">Theme</span>
+                  <span className="text-white/90">Theme</span>
                   <span className="truncate max-w-[110px]">
                     {themeSummary()}
                   </span>
-                  <FiChevronDown size={12} className="text-gray-400" />
+                  <FiChevronDown size={12} className="text-white/80" />
                 </button>
                 {showThemePanel && (
-                  <div className="absolute z-20 mt-2 w-60 bg-dark-card border border-gray-700 rounded-lg p-3 shadow-xl space-y-2 max-h-64 overflow-y-auto">
-                    <div className="flex items-center justify-between text-xs text-gray-200">
+                  <div className="absolute z-20 mt-2 w-60 bg-dark-sidebar/95 backdrop-blur-xl border border-white/10 rounded-xl p-3 shadow-xl space-y-2 max-h-64 overflow-y-auto">
+                    <div className="flex items-center justify-between text-xs text-white">
                       <span>Themes</span>
                       <button
                         onClick={() => setSelectedThemes([])}
-                        className="text-gray-400 hover:text-white text-[11px]"
+                        className="text-white/80 hover:text-white text-[11px]"
                       >
                         Clear
                       </button>
@@ -758,7 +758,7 @@ export default function Sidebar() {
                           className={`px-2 py-1.5 rounded-md text-xs flex items-center gap-1 transition-colors ${
                             selectedThemes.includes(theme)
                               ? 'bg-emerald-500 text-white'
-                              : 'bg-black/40 text-gray-200 hover:bg-gray-700'
+                              : 'bg-white/5 text-white hover:bg-white/10'
                           }`}
                         >
                           <span>{getThemeIcon(theme)}</span>
@@ -779,23 +779,23 @@ export default function Sidebar() {
                 const nextIndex = (currentIndex + 1) % options.length;
                 setSelectedSort(options[nextIndex]);
               }}
-              className="flex items-center gap-2 bg-dark-card border border-gray-700 rounded-lg px-3 py-1.5 text-xs text-gray-200 hover:border-gray-500 transition-colors"
+              className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white hover:border-white/20 transition-colors"
             >
-              <span className="text-gray-400">Sort</span>
+              <span className="text-white/90">Sort</span>
               <span className="capitalize">{selectedSort}</span>
-              <FiChevronDown size={12} className="text-gray-400" />
+              <FiChevronDown size={12} className="text-white/80" />
             </button>
           </div>
         </div>
       )}
 
       {/* Event List */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto px-5 py-3">
         {searchMode === 'ai' ? (
           aiResults.length > 0 ? (
             <AIResultsList events={aiResults} />
           ) : (
-            <div className="h-full flex items-center justify-center text-gray-500 text-sm">
+            <div className="h-full flex items-center justify-center text-white text-sm">
               Results will show here
             </div>
           )

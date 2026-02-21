@@ -47,19 +47,24 @@ body {
   font-family: inherit;
 }
 
-/* Leaflet popup overrides for dark theme */
+/* Leaflet popup – liquid glass (matches sidebar) */
 .leaflet-popup-content-wrapper {
-  background-color: #2a2a2a !important;
+  background: rgba(42, 42, 42, 0.75) !important;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   color: #ffffff !important;
-  border-radius: 8px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
 }
 
 .leaflet-popup-tip {
-  background-color: #2a2a2a !important;
+  background: rgba(42, 42, 42, 0.85) !important;
 }
 
 .leaflet-popup-content {
   color: #ffffff !important;
+  margin: 12px 14px !important;
 }
 
 /* Custom marker styles */
