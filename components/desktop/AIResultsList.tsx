@@ -2,8 +2,6 @@
 
 import { Event } from '@/types';
 import { format } from 'date-fns';
-import { calculateDistanceMiles, formatDistance } from '@/lib/utils';
-import { TORONTO_CENTER_LOCATION } from '@/lib/dummy-data';
 import { getFeatureIcon, getThemeIcon } from '@/lib/event-metadata';
 import { getCategoryIcon } from '@/lib/category-icons';
 import { IconType } from 'react-icons';
@@ -21,8 +19,7 @@ interface AIResultsListProps {
 }
 
 export default function AIResultsList({ events }: AIResultsListProps) {
-  const { setSelectedEvent, selectedEvent, userLocation } = useStore();
-  const referenceLocation = userLocation || TORONTO_CENTER_LOCATION;
+  const { setSelectedEvent, selectedEvent } = useStore();
 
   const formatEventDate = (dateString: string) => {
     try {
@@ -84,16 +81,14 @@ export default function AIResultsList({ events }: AIResultsListProps) {
             <h3 className="text-white font-medium truncate">{event.name}</h3>
             <div className="flex items-center gap-2 text-sm text-white mt-1">
               <span className="truncate">{event.locationName}</span>
-              <span>•</span>
-              <span>{formatDistance(calculateDistanceMiles(referenceLocation, event.location))}</span>
             </div>
             <div className="flex items-center gap-2 text-xs text-white/90 mt-1">
-              <span>{formatEventDate(event.startDate)}</span>
-              {event.startDate !== event.endDate && (
+              {event.startDate !== event.endDate ? (
                 <>
-                  <span>•</span>
-                  <span>{formatEventDate(event.endDate)}</span>
+                  <span>{formatEventDate(event.startDate)} – {formatEventDate(event.endDate)}</span>
                 </>
+              ) : (
+                <span>{formatEventDate(event.startDate)}</span>
               )}
             </div>
             {event.categories && event.categories.length > 0 && (

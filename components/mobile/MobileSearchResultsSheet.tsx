@@ -4,8 +4,7 @@ import { FiX } from 'react-icons/fi';
 import { useStore } from '@/store/useStore';
 import { useDraggableSheet } from '@/hooks/useDraggableSheet';
 import { Event } from '@/types';
-import { calculateDistanceMiles, formatDistance } from '@/lib/utils';
-import { TORONTO_CENTER_LOCATION } from '@/lib/dummy-data';
+import { format } from 'date-fns';
 import { getThemeIcon } from '@/lib/event-metadata';
 import { getCategoryIcon } from '@/lib/category-icons';
 import React from 'react';
@@ -16,10 +15,18 @@ interface EventCardProps {
 }
 
 function EventCard({ event, onSelect }: EventCardProps) {
-  const { userLocation } = useStore();
-  const refLoc = userLocation || TORONTO_CENTER_LOCATION;
   const CategoryIcon = getCategoryIcon(event.categories || []);
   const themeEmoji = event.themes?.[0] ? getThemeIcon(event.themes[0]) : null;
+  const formatEventDate = (dateString: string) => {
+    try {
+      return format(new Date(dateString), 'MMM d, yyyy');
+    } catch {
+      return dateString;
+    }
+  };
+  const dateLabel = event.startDate !== event.endDate
+    ? `${formatEventDate(event.startDate)} – ${formatEventDate(event.endDate)}`
+    : formatEventDate(event.startDate);
 
   return (
     <button
@@ -48,7 +55,10 @@ function EventCard({ event, onSelect }: EventCardProps) {
           )}
         </div>
         <div className="text-xs text-gray-400 mt-1">
-          {event.locationName} · {formatDistance(calculateDistanceMiles(refLoc, event.location))}
+          {event.locationName}
+        </div>
+        <div className="text-xs text-gray-400 mt-0.5">
+          {dateLabel}
         </div>
       </div>
       <div className="flex-shrink-0">

@@ -2,15 +2,12 @@
 
 import { useStore } from '@/store/useStore';
 import { format } from 'date-fns';
-import { calculateDistanceMiles, formatDistance } from '@/lib/utils';
-import { TORONTO_CENTER_LOCATION } from '@/lib/dummy-data';
 import { getThemeIcon } from '@/lib/event-metadata';
 import { getCategoryIcon } from '@/lib/category-icons';
 
 export default function MobileNavigationTab() {
   const {
     filteredEvents,
-    userLocation,
     selectedFilter,
     setSelectedFilter,
     selectedCategories,
@@ -18,12 +15,10 @@ export default function MobileNavigationTab() {
   } = useStore();
   const events = filteredEvents();
 
-  const referenceLocation = userLocation || TORONTO_CENTER_LOCATION;
-
   const formatEventDate = (dateString: string) => {
     try {
       const date = new Date(dateString);
-      return format(date, 'MMM d');
+      return format(date, 'MMM d, yyyy');
     } catch {
       return dateString;
     }
@@ -42,6 +37,15 @@ export default function MobileNavigationTab() {
     return 'Paid';
   };
 
+  /** Display label: add $ to single price if missing */
+  const getDisplayPriceLabel = (event: any) => {
+    const label = getPriceLabel(event);
+    if (label === 'Free' || label === 'Paid') return label;
+    if (label.includes(' - ')) return label; // range already has $ or format
+    if (label.startsWith('$')) return label;
+    return `$${label}`;
+  };
+
   const getTitleSizeClass = (name: string) => {
     if (name.length > 40) return 'text-[11px]';
     if (name.length > 28) return 'text-[12px]';
@@ -52,6 +56,14 @@ export default function MobileNavigationTab() {
     if (label.length > 18) return 'text-[8px]';
     if (label.length > 12) return 'text-[9px]';
     return 'text-[10px]';
+  };
+
+  /** Compact bubble for "Free" or single price; full width for price ranges */
+  const isCompactPriceBubble = (label: string) => {
+    if (!label) return true;
+    if (label === 'Free' || label === 'Paid') return true;
+    if (!label.includes(' - ') && label.length < 15) return true;
+    return false;
   };
 
   const categoryFilters: { id: string; label: string; categories: string[] }[] = [
@@ -119,6 +131,20 @@ export default function MobileNavigationTab() {
           >
             Accessible
           </button>
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedFilter('multi-day');
+              setSelectedCategories([]);
+            }}
+            className={`whitespace-nowrap rounded-full px-3.5 py-1.5 text-xs font-medium ${
+              !activeCategoryId && selectedFilter === 'multi-day'
+                ? 'bg-gray-900 text-white'
+                : 'bg-gray-100 text-gray-700'
+            }`}
+          >
+            Multi-day
+          </button>
           {categoryFilters.map((filter) => (
             <button
               key={filter.id}
@@ -143,10 +169,11 @@ export default function MobileNavigationTab() {
         <div className="grid grid-cols-2 gap-3">
           {events.map((event) => {
             const emoji = getEmojiForEvent(event);
-            const priceLabel = getPriceLabel(event);
+            const priceLabel = getDisplayPriceLabel(event);
             const CategoryIcon = getCategoryIcon(event.categories || []);
             const titleSizeClass = getTitleSizeClass(event.name || '');
              const priceSizeClass = getPriceSizeClass(priceLabel || '');
+            const compactBubble = isCompactPriceBubble(priceLabel || '');
 
             return (
               <article
@@ -162,17 +189,22 @@ export default function MobileNavigationTab() {
                 <div className="mt-1 space-y-0.5 text-[10px] text-gray-500">
                   <p className="leading-snug line-clamp-1">{event.locationName}</p>
                   <p className="text-[10px] text-gray-400 leading-snug">
-                    {formatEventDate(event.startDate)} •{' '}
-                    {formatDistance(calculateDistanceMiles(referenceLocation, event.location))}
+                    {event.startDate !== event.endDate
+                      ? `${formatEventDate(event.startDate)} – ${formatEventDate(event.endDate)}`
+                      : formatEventDate(event.startDate)}
                   </p>
                 </div>
 
                 <div className="mt-3 flex items-end justify-between">
                   <span
-                    className={`inline-flex h-6 w-[96px] items-center justify-center rounded-full px-2.5 py-1 font-semibold ${priceSizeClass} ${
+                    className={`inline-flex items-center justify-center rounded-full font-semibold ${priceSizeClass} ${
+                      compactBubble
+                        ? 'h-5 min-w-0 w-auto px-2 py-0.5'
+                        : 'h-6 w-[96px] px-2.5 py-1'
+                    } ${
                       event.isFree
                         ? 'bg-emerald-50 text-emerald-600'
-                        : 'bg-emerald-50 text-emerald-700'
+                        : 'bg-blue-50 text-blue-700'
                     }`}
                   >
                     <span className="whitespace-nowrap">{priceLabel}</span>

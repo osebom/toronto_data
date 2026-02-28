@@ -3,8 +3,6 @@
 import { useStore } from '@/store/useStore';
 import { Event } from '@/types';
 import { format } from 'date-fns';
-import { calculateDistanceMiles, formatDistance } from '@/lib/utils';
-import { TORONTO_CENTER_LOCATION } from '@/lib/dummy-data';
 import { getFeatureIcon, getThemeIcon } from '@/lib/event-metadata';
 import { getCategoryIcon } from '@/lib/category-icons';
 import { IconType } from 'react-icons';
@@ -17,11 +15,8 @@ type IconComponentProps = {
 };
 
 export default function EventList() {
-  const { filteredEvents, setSelectedEvent, selectedEvent, userLocation, isLoadingEvents, eventsLoadedCount, totalEventsCount } = useStore();
+  const { filteredEvents, setSelectedEvent, selectedEvent, isLoadingEvents, eventsLoadedCount, totalEventsCount } = useStore();
   const events = filteredEvents();
-  
-  // Use user's location if available, otherwise fall back to Toronto center
-  const referenceLocation = userLocation || TORONTO_CENTER_LOCATION;
 
   const formatEventDate = (dateString: string) => {
     try {
@@ -75,16 +70,14 @@ export default function EventList() {
             <h3 className="text-white font-medium truncate">{event.name}</h3>
             <div className="flex items-center gap-2 text-sm text-white mt-1">
               <span className="truncate">{event.locationName}</span>
-              <span>•</span>
-              <span>{formatDistance(calculateDistanceMiles(referenceLocation, event.location))}</span>
             </div>
             <div className="flex items-center gap-2 text-xs text-white/90 mt-1">
-              <span>{formatEventDate(event.startDate)}</span>
-              {event.startDate !== event.endDate && (
+              {event.startDate !== event.endDate ? (
                 <>
-                  <span>•</span>
-                  <span>{formatEventDate(event.endDate)}</span>
+                  <span>{formatEventDate(event.startDate)} – {formatEventDate(event.endDate)}</span>
                 </>
+              ) : (
+                <span>{formatEventDate(event.startDate)}</span>
               )}
             </div>
             {event.categories && event.categories.length > 0 && (

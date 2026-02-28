@@ -213,13 +213,15 @@ export const useStore = create<AppState>((set, get) => ({
     if (startBoundary) startBoundary.setHours(0, 0, 0, 0);
     if (endBoundary) endBoundary.setHours(23, 59, 59, 999);
     
-    // Filter by free/paid status
+    // Filter by free/paid status and multi-day
     if (selectedFilter === 'free') {
       filtered = filtered.filter(event => event.isFree);
     } else if (selectedFilter === 'paid') {
       filtered = filtered.filter(event => !event.isFree);
     } else if (selectedFilter === 'accessible') {
       filtered = filtered.filter((event) => event.isAccessible);
+    } else if (selectedFilter === 'multi-day') {
+      filtered = filtered.filter((event) => event.startDate && event.endDate && event.startDate !== event.endDate);
     }
 
     if (selectedThemes.length > 0) {

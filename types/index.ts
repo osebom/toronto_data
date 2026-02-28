@@ -40,7 +40,7 @@ export type POICategory =
   | 'entertainment';
 
 export type SortOption = 'nearest' | 'name' | 'rating';
-export type FilterOption = 'all' | 'free' | 'paid' | 'open-now' | 'accessible';
+export type FilterOption = 'all' | 'free' | 'paid' | 'open-now' | 'accessible' | 'multi-day';
 
 export interface EventPartnership {
   role: string;
