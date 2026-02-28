@@ -8,10 +8,11 @@ export default function SearchBar() {
 
   return (
     <div
-      className="absolute bottom-0 left-0 right-0 p-4 pointer-events-none"
+      className="absolute left-0 right-0 p-4 pointer-events-none"
       style={{
+        bottom: 0,
         zIndex: 1000,
-        paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom, 0px) + 1.5rem)',
+        paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 5.5rem)',
       }}
     >
       <button

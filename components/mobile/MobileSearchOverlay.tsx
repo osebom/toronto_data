@@ -34,6 +34,7 @@ export default function MobileSearchOverlay() {
     setMobileResultsSheetOpen,
     setMobileResultsTab,
     setSearchQuery,
+    setMobileTab,
   } = useStore();
 
   const [inputValue, setInputValue] = useState('');
@@ -76,6 +77,7 @@ export default function MobileSearchOverlay() {
     setMobileSearchOpen(false);
     setMobileResultsSheetOpen(true);
     setMobileResultsTab('for-you');
+    setMobileTab('chat');
 
     try {
       const res = await fetch('/api/ai-search', {

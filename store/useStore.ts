@@ -15,6 +15,8 @@ interface AppState {
   // View mode
   isMobile: boolean;
   setIsMobile: (isMobile: boolean) => void;
+  mobileTab: 'navigation' | 'chat' | 'map';
+  setMobileTab: (tab: 'navigation' | 'chat' | 'map') => void;
   
   // User location
   userLocation: Location | null;
@@ -92,6 +94,8 @@ interface AppState {
 export const useStore = create<AppState>((set, get) => ({
   isMobile: false,
   setIsMobile: (isMobile) => set({ isMobile }),
+  mobileTab: 'map',
+  setMobileTab: (tab) => set({ mobileTab: tab }),
   
   userLocation: null,
   setUserLocation: (location) => set({ userLocation: location }),
