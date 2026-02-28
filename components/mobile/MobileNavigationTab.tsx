@@ -71,7 +71,7 @@ export default function MobileNavigationTab() {
       className="fixed inset-0 z-[1020] flex flex-col bg-white"
       style={{
         paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1rem)',
-        paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 5rem)',
+        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
       }}
     >
       <header className="px-5 pb-3">
@@ -139,7 +139,7 @@ export default function MobileNavigationTab() {
         </div>
       </header>
 
-      <main className="flex-1 overflow-y-auto px-5 pb-4">
+      <main className="flex-1 overflow-y-auto px-5" style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0px) + 4rem)' }}>
         <div className="grid grid-cols-2 gap-3">
           {events.map((event) => {
             const emoji = getEmojiForEvent(event);
