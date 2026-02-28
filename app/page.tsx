@@ -74,8 +74,8 @@ export default function Home() {
           {/* Chat tab */}
           {mobileTab === 'chat' && <MobileChatTab />}
 
-          {/* Persistent bottom nav */}
-          <MobileTabBar />
+          {/* Persistent bottom nav (hidden on chat page) */}
+          {mobileTab !== 'chat' && <MobileTabBar />}
         </div>
       ) : (
         // Desktop Layout - Full-screen map with sidebar overlay (for liquid blur)

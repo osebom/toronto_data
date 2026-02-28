@@ -17,7 +17,9 @@ interface AppState {
   setIsMobile: (isMobile: boolean) => void;
   mobileTab: 'navigation' | 'chat' | 'map';
   setMobileTab: (tab: 'navigation' | 'chat' | 'map') => void;
-  
+  previousMobileTab: 'navigation' | 'chat' | 'map';
+  setPreviousMobileTab: (tab: 'navigation' | 'chat' | 'map') => void;
+
   // User location
   userLocation: Location | null;
   setUserLocation: (location: Location | null) => void;
@@ -96,7 +98,9 @@ export const useStore = create<AppState>((set, get) => ({
   setIsMobile: (isMobile) => set({ isMobile }),
   mobileTab: 'map',
   setMobileTab: (tab) => set({ mobileTab: tab }),
-  
+  previousMobileTab: 'navigation',
+  setPreviousMobileTab: (tab) => set({ previousMobileTab: tab }),
+
   userLocation: null,
   setUserLocation: (location) => set({ userLocation: location }),
   
