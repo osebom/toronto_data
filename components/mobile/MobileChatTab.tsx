@@ -4,11 +4,10 @@ import { useStore } from '@/store/useStore';
 import { FiX } from 'react-icons/fi';
 
 const SUGGESTION_CHIPS = [
-  { emoji: '⚡', label: 'midday pick-me-up' },
-  { emoji: '❤️', label: 'date night' },
-  { emoji: '👩‍💻', label: 'spots to cowork from' },
-  { emoji: '⏱️', label: '"food places"' },
-  { emoji: '⏱️', label: '"date night spots"' },
+  { emoji: '🍽️', label: 'food events' },
+  { emoji: '🎨', label: 'art exhibitions' },
+  { emoji: '🎵', label: 'music' },
+  { emoji: '🖼️', label: 'art exhibits' },
 ];
 
 export default function MobileChatTab() {

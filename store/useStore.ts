@@ -115,7 +115,7 @@ export const useStore = create<AppState>((set, get) => ({
   totalEventsCount: 0,
   setEventsProgress: (loaded, total) => set({ eventsLoadedCount: loaded, totalEventsCount: total }),
   
-  selectedFilter: 'all',
+  selectedFilter: 'this-week',
   setSelectedFilter: (filter) => set({ selectedFilter: filter }),
   
   selectedSort: 'nearest',
@@ -217,6 +217,20 @@ export const useStore = create<AppState>((set, get) => ({
     if (startBoundary) startBoundary.setHours(0, 0, 0, 0);
     if (endBoundary) endBoundary.setHours(23, 59, 59, 999);
     
+    // Filter by this week: events overlapping [today, today+7 days)
+    if (selectedFilter === 'this-week') {
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      const weekEnd = new Date(todayStart);
+      weekEnd.setDate(weekEnd.getDate() + 7);
+      filtered = filtered.filter((event) => {
+        const eventStart = new Date(event.startDate);
+        const eventEnd = new Date(event.endDate);
+        if (Number.isNaN(eventStart.getTime()) || Number.isNaN(eventEnd.getTime())) return false;
+        return eventEnd >= todayStart && eventStart < weekEnd;
+      });
+    }
+
     // Filter by free/paid status and multi-day
     if (selectedFilter === 'free') {
       filtered = filtered.filter(event => event.isFree);
@@ -282,7 +296,16 @@ export const useStore = create<AppState>((set, get) => ({
     } else if (selectedSort === 'name') {
       filtered.sort((a, b) => a.name.localeCompare(b.name));
     }
-    
+
+    // This Week: show single-day events first, then multi-day (recurring)
+    if (selectedFilter === 'this-week') {
+      const isSingleDay = (e: Event) =>
+        e.startDate === e.endDate || (e.startDate?.slice(0, 10) === e.endDate?.slice(0, 10));
+      const single = filtered.filter(isSingleDay);
+      const multi = filtered.filter((e) => !isSingleDay(e));
+      filtered = [...single, ...multi];
+    }
+
     return filtered;
   },
 }));

@@ -25,7 +25,7 @@ export default function MobileTabBar() {
       style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 8px)' }}
     >
       <div
-        className="pointer-events-auto flex min-w-[240px] max-w-[300px] flex-1 items-center justify-around rounded-[1.5rem] bg-white/65 px-3 py-2 shadow-[0_2px_16px_rgba(0,0,0,0.06)] backdrop-blur-2xl backdrop-saturate-150 border border-white/40"
+        className="pointer-events-auto flex min-w-[240px] max-w-[300px] flex-1 items-center justify-around rounded-[1.5rem] bg-white/65 px-3 py-2 shadow-[0_2px_16px_rgba(0,0,0,0.06)] backdrop-blur-2xl backdrop-saturate-150 border-2 border-white/70 ring-1 ring-white/30"
       >
         {TABS.map((tab) => {
           const Icon = tab.icon;

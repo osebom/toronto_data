@@ -569,7 +569,7 @@ export default function Sidebar() {
             <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-2 py-1.5 text-xs text-white">
               <span className="text-white/90">Filter</span>
               <div className="flex flex-wrap gap-1">
-                {(['all', 'free', 'paid', 'accessible', 'multi-day'] as const).map((option) => (
+                {(['this-week', 'free', 'paid', 'accessible', 'multi-day'] as const).map((option) => (
                   <button
                     key={option}
                     onClick={() => setSelectedFilter(option)}
@@ -579,7 +579,7 @@ export default function Sidebar() {
                         : 'bg-white/5 text-white hover:bg-white/10'
                     }`}
                   >
-                    {option === 'all' ? 'All' : option === 'multi-day' ? 'Multi-day' : option}
+                    {option === 'this-week' ? 'This Week' : option === 'multi-day' ? 'Multi-day' : option}
                   </button>
                 ))}
               </div>

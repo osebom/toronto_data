@@ -114,7 +114,7 @@ export default function MobileSearchResultsSheet() {
 
   return (
     <div
-      className="fixed inset-x-0 bottom-0 z-[1050] bg-white rounded-t-2xl shadow-xl flex flex-col"
+      className="fixed inset-x-0 bottom-0 z-[1050] rounded-t-2xl flex flex-col bg-white/65 shadow-[0_2px_16px_rgba(0,0,0,0.06)] backdrop-blur-2xl backdrop-saturate-150 border-2 border-white/70 border-b-0 ring-1 ring-white/30"
       style={{
         height: `${heightVh}vh`,
         maxHeight: '85vh',
@@ -126,7 +126,7 @@ export default function MobileSearchResultsSheet() {
         className="flex justify-center pt-3 pb-1 cursor-grab active:cursor-grabbing"
         {...dragHandleProps}
       >
-        <div className="w-10 h-1 rounded-full bg-gray-300" />
+        <div className="w-10 h-1 rounded-full bg-gray-400/80" />
       </div>
 
       {/* Header: filter pill + close */}

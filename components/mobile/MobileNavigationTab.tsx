@@ -92,16 +92,16 @@ export default function MobileNavigationTab() {
           <button
             type="button"
             onClick={() => {
-              setSelectedFilter('all');
+              setSelectedFilter('this-week');
               setSelectedCategories([]);
             }}
             className={`whitespace-nowrap rounded-full px-3.5 py-1.5 text-xs font-medium ${
-              !activeCategoryId && selectedFilter === 'all'
+              !activeCategoryId && selectedFilter === 'this-week'
                 ? 'bg-gray-900 text-white'
                 : 'bg-gray-100 text-gray-700'
             }`}
           >
-            All events
+            This Week
           </button>
           <button
             type="button"
