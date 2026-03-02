@@ -8,7 +8,6 @@ import Sidebar from '@/components/desktop/Sidebar';
 import MapView from '@/components/map/MapView';
 import SearchBar from '@/components/mobile/SearchBar';
 import MapControls from '@/components/mobile/MapControls';
-import MobileSearchOverlay from '@/components/mobile/MobileSearchOverlay';
 import MobileSearchResultsSheet from '@/components/mobile/MobileSearchResultsSheet';
 import MobileEventDetailSheet from '@/components/mobile/MobileEventDetailSheet';
 import MobileTabBar from '@/components/mobile/MobileTabBar';
@@ -60,7 +59,6 @@ export default function Home() {
               <MapView mode={mapMode} />
               <MapControls />
               <SearchBar />
-              <MobileSearchOverlay />
               <MobileSearchResultsSheet />
               <MobileEventDetailSheet />
             </div>

@@ -6,6 +6,44 @@ import { sampleApiEvents } from '@/lib/sample-events';
 import { calculateDistanceMiles } from '@/lib/utils';
 import { TORONTO_CENTER_LOCATION } from '@/lib/dummy-data';
 
+const CHAT_STORAGE_KEY = 'toronto-chat';
+const CHAT_INACTIVITY_MS = 5 * 60 * 1000;
+const CHAT_MAX_LIFETIME_MS = 10 * 60 * 1000;
+
+type ChatMessage = { role: 'user' | 'assistant'; text: string; events?: Event[] };
+
+function getInitialChatState(): {
+  messages: ChatMessage[];
+  count: number;
+  lastVisited: number | null;
+  sessionStarted: number | null;
+} | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem(CHAT_STORAGE_KEY);
+    if (!raw) return null;
+    const data = JSON.parse(raw) as {
+      messages?: ChatMessage[];
+      count?: number;
+      lastVisited?: number | null;
+      sessionStarted?: number | null;
+    };
+    const now = Date.now();
+    const last = data.lastVisited ?? null;
+    const start = data.sessionStarted ?? null;
+    if (last != null && now - last > CHAT_INACTIVITY_MS) return null;
+    if (start != null && now - start > CHAT_MAX_LIFETIME_MS) return null;
+    return {
+      messages: Array.isArray(data.messages) ? data.messages : [],
+      count: typeof data.count === 'number' ? data.count : 0,
+      lastVisited: last,
+      sessionStarted: start,
+    };
+  } catch {
+    return null;
+  }
+}
+
 interface DateRangeFilter {
   start: string | null;
   end: string | null;
@@ -70,7 +108,23 @@ interface AppState {
   setSelectedEvent: (event: Event | null) => void;
   chatEventGroup: Event[];
   setChatEventGroup: (events: Event[]) => void;
-  
+
+  // Mobile chat (persisted across tab switches; cleared after 5 min inactivity)
+  chatMessages: Array<{ role: 'user' | 'assistant'; text: string; events?: Event[] }>;
+  setChatMessages: (
+    messages:
+      | Array<{ role: 'user' | 'assistant'; text: string; events?: Event[] }>
+      | ((prev: Array<{ role: 'user' | 'assistant'; text: string; events?: Event[] }>) => Array<{ role: 'user' | 'assistant'; text: string; events?: Event[] }>)
+  ) => void;
+  chatAssistantResponseCount: number;
+  setChatAssistantResponseCount: (n: number | ((prev: number) => number)) => void;
+  chatLastVisitedAt: number | null;
+  setChatLastVisitedAt: (t: number | null) => void;
+  chatSessionStartedAt: number | null;
+  setChatSessionStartedAt: (t: number | null) => void;
+  chatPendingQuery: string | null;
+  setChatPendingQuery: (q: string | null) => void;
+
   // Mobile search
   mobileSearchOpen: boolean;
   setMobileSearchOpen: (open: boolean) => void;
@@ -148,7 +202,29 @@ export const useStore = create<AppState>((set, get) => ({
   setSelectedEvent: (event) => set({ selectedEvent: event }),
   chatEventGroup: [],
   setChatEventGroup: (events) => set({ chatEventGroup: events }),
-  
+
+  ...(function () {
+    const initial = getInitialChatState();
+    return {
+      chatMessages: initial?.messages ?? [],
+      chatAssistantResponseCount: initial?.count ?? 0,
+      chatLastVisitedAt: initial?.lastVisited ?? null,
+      chatSessionStartedAt: initial?.sessionStarted ?? null,
+    };
+  })(),
+  setChatMessages: (messages) =>
+    set((state) => ({
+      chatMessages: typeof messages === 'function' ? messages(state.chatMessages) : messages,
+    })),
+  setChatAssistantResponseCount: (n) =>
+    set((state) => ({
+      chatAssistantResponseCount: typeof n === 'function' ? n(state.chatAssistantResponseCount) : n,
+    })),
+  setChatLastVisitedAt: (t) => set({ chatLastVisitedAt: t }),
+  setChatSessionStartedAt: (t) => set({ chatSessionStartedAt: t }),
+  chatPendingQuery: null,
+  setChatPendingQuery: (q) => set({ chatPendingQuery: q }),
+
   mobileSearchOpen: false,
   setMobileSearchOpen: (open) => set({ mobileSearchOpen: open }),
   mobileSearchResults: [],
@@ -313,3 +389,22 @@ export const useStore = create<AppState>((set, get) => ({
     return filtered;
   },
 }));
+
+if (typeof window !== 'undefined') {
+  useStore.subscribe(() => {
+    const state = useStore.getState();
+    try {
+      localStorage.setItem(
+        CHAT_STORAGE_KEY,
+        JSON.stringify({
+          messages: state.chatMessages,
+          count: state.chatAssistantResponseCount,
+          lastVisited: state.chatLastVisitedAt,
+          sessionStarted: state.chatSessionStartedAt,
+        })
+      );
+    } catch {
+      // ignore storage errors
+    }
+  });
+}

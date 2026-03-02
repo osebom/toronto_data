@@ -1,10 +1,13 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { useStore } from '@/store/useStore';
-import { FiX } from 'react-icons/fi';
+import { FiX, FiRefreshCw } from 'react-icons/fi';
 import EventMiniWidget from '@/components/mobile/EventMiniWidget';
 import { Event } from '@/types';
+import { filterEventsWithAIFilters, rankAndLimitEvents, generateEventSummary } from '@/lib/ai-filter-events';
+import { ExtractedFilters } from '@/app/api/ai-search/route';
+import { getRateLimitStatus, recordMessage, formatTimeUntilReset } from '@/lib/rate-limit';
 
 const SUGGESTION_CHIPS = [
   { emoji: '🍽️', label: 'food events' },
@@ -30,19 +33,75 @@ function renderBold(text: string) {
   );
 }
 
+const MAX_ASSISTANT_RESPONSES = 4;
+
+const CHAT_INACTIVITY_MS = 5 * 60 * 1000; // 5 minutes of no visits
+const CHAT_MAX_LIFETIME_MS = 10 * 60 * 1000; // 10 minutes total session lifetime
+
 export default function MobileChatTab() {
-  const { previousMobileTab, setMobileTab, setSelectedEvent, setChatEventGroup, filteredEvents } = useStore();
-  const [messages, setMessages] = useState<Message[]>([]);
+  const {
+    previousMobileTab,
+    setMobileTab,
+    setSelectedEvent,
+    setChatEventGroup,
+    events,
+    userLocation,
+    chatMessages,
+    setChatMessages,
+    chatAssistantResponseCount,
+    setChatAssistantResponseCount,
+    chatLastVisitedAt,
+    setChatLastVisitedAt,
+    chatSessionStartedAt,
+    setChatSessionStartedAt,
+    chatPendingQuery,
+    setChatPendingQuery,
+  } = useStore();
   const [inputValue, setInputValue] = useState('');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [rateLimitStatus, setRateLimitStatus] = useState(getRateLimitStatus());
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const [isThinking, setIsThinking] = useState(false);
   const thinkingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const messages = chatMessages;
+  const setMessages = setChatMessages;
+  const assistantResponseCount = chatAssistantResponseCount;
+  const setAssistantResponseCount = setChatAssistantResponseCount;
+
   const scrollToBottom = () => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   useEffect(() => {
     scrollToBottom();
   }, [messages, isThinking]);
+
+  // On each visit to the chat tab: update lastVisited, clear if 5 min inactive or 10 min max lifetime.
+  // Run once per mount only (no chatLastVisitedAt in deps) to avoid update loop from setChatLastVisitedAt.
+  useEffect(() => {
+    const now = Date.now();
+    const state = useStore.getState();
+    const last = state.chatLastVisitedAt;
+    const sessionStart = state.chatSessionStartedAt;
+
+    const inactiveTooLong = last != null && now - last > CHAT_INACTIVITY_MS;
+    const sessionTooOld = sessionStart != null && now - sessionStart > CHAT_MAX_LIFETIME_MS;
+
+    if (inactiveTooLong || sessionTooOld) {
+      setChatMessages([]);
+      setChatAssistantResponseCount(0);
+      setChatSessionStartedAt(now);
+    }
+    if (sessionStart == null) {
+      setChatSessionStartedAt(now);
+    }
+    setChatLastVisitedAt(now);
+    setRateLimitStatus(getRateLimitStatus());
+  }, [
+    setChatLastVisitedAt,
+    setChatMessages,
+    setChatAssistantResponseCount,
+    setChatSessionStartedAt,
+  ]);
 
   useEffect(() => {
     return () => {
@@ -50,41 +109,194 @@ export default function MobileChatTab() {
     };
   }, []);
 
-  const handleBack = () => setMobileTab(previousMobileTab);
-
-  const pickRandomEvents = (count: number): Event[] => {
-    const pool = filteredEvents();
-    if (pool.length <= count) return [...pool];
-    const shuffled = [...pool].sort(() => Math.random() - 0.5);
-    return shuffled.slice(0, count);
+  const resetChat = () => {
+    setChatMessages([]);
+    setChatAssistantResponseCount(0);
+    setErrorMessage(null);
+    setChatSessionStartedAt(Date.now());
+    setRateLimitStatus(getRateLimitStatus());
   };
 
-  const sendMessage = (text: string) => {
+  const isSendDisabled = !rateLimitStatus.canSend || assistantResponseCount >= MAX_ASSISTANT_RESPONSES;
+
+  const availableThemes = useMemo(() => {
+    const set = new Set<string>();
+    events.forEach((e) => e.themes?.forEach((t) => set.add(t)));
+    return Array.from(set);
+  }, [events]);
+
+  const availableCategories = useMemo(() => {
+    const set = new Set<string>();
+    events.forEach((e) => e.categories?.forEach((c) => set.add(c)));
+    return Array.from(set);
+  }, [events]);
+
+  const handleBack = () => setMobileTab(previousMobileTab);
+
+  const sendMessage = async (text: string) => {
     const trimmed = text.trim();
     if (!trimmed) return;
+
+    // Hard cap on assistant replies per session
+    if (assistantResponseCount >= MAX_ASSISTANT_RESPONSES) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: 'assistant',
+          text: `You've reached the maximum of ${MAX_ASSISTANT_RESPONSES} responses for this session. Please wait a bit before starting a new conversation.`,
+        },
+      ]);
+      return;
+    }
+
+    // Client-side rate limit (4 messages per 2 minutes, configured in lib/rate-limit)
+    const status = getRateLimitStatus();
+    setRateLimitStatus(status);
+    if (!status.canSend || !recordMessage()) {
+      const reset = formatTimeUntilReset();
+      const msg = `You've reached your message limit of 4 messages per minute. Please try again in ${reset}.`;
+      setMessages((prev) => [
+        ...prev,
+        { role: 'assistant', text: msg },
+      ]);
+      setErrorMessage(msg);
+      setRateLimitStatus(getRateLimitStatus());
+      return;
+    }
+
+    setErrorMessage(null);
+
+    if (!chatSessionStartedAt) {
+      setChatSessionStartedAt(Date.now());
+    }
+
     setInputValue('');
     setMessages((prev) => [...prev, { role: 'user', text: trimmed }]);
     setIsThinking(true);
     const dummyIndex = messages.length % DUMMY_RESPONSES.length;
-    const dummyText = DUMMY_RESPONSES[dummyIndex];
-    const randomEvents = pickRandomEvents(5);
-    thinkingTimerRef.current = setTimeout(() => {
+
+    try {
+      // Build minimal chat context for API (last few messages)
+      const contextMessages = messages.slice(-5).map((msg) => ({
+        role: msg.role,
+        content: msg.text,
+      }));
+
+      const res = await fetch('/api/ai-search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: trimmed,
+          availableThemes,
+          availableCategories,
+          chatContext: contextMessages,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        if (res.status === 429) {
+          const reset = formatTimeUntilReset();
+          const msg =
+            data.message ||
+            `You've reached your message limit of 4 messages per minute. Please try again in ${reset}.`;
+          setMessages((prev) => [...prev, { role: 'assistant', text: msg }]);
+          setErrorMessage(msg);
+          return;
+        }
+        const errorMsg =
+          data.details || data.error || data.message || 'Sorry, I could not process that search.';
+        throw new Error(errorMsg);
+      }
+
+      const apiResponse = (await res.json()) as {
+        filters: ExtractedFilters;
+        response?: string;
+      };
+      const { filters, response: directResponse } = apiResponse;
+
+      // If API returned a direct response (non-event question), just show it and don't search
+      if (directResponse) {
+        setMessages((prev) => [
+          ...prev,
+          { role: 'assistant', text: directResponse },
+        ]);
+      setAssistantResponseCount((prev) => prev + 1);
+      setRateLimitStatus(getRateLimitStatus());
+        return;
+      }
+
+      // Filter and rank events using AI filters (max 6)
+      const filtered = filterEventsWithAIFilters(events, filters, userLocation);
+      const top = rankAndLimitEvents(filtered, 6, userLocation);
+
+      let responseText: string;
+      if (top.length > 0) {
+        const summaries = top.map(generateEventSummary);
+        try {
+          const respondRes = await fetch('/api/ai-search/respond', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              query: trimmed,
+              eventSummaries: summaries,
+              count: top.length,
+            }),
+          });
+          if (respondRes.ok) {
+            const { response } = (await respondRes.json()) as { response: string };
+            responseText = response;
+          } else {
+            responseText = `I found ${top.length} event${
+              top.length !== 1 ? 's' : ''
+            } for you. Here are a few options.`;
+          }
+        } catch {
+          responseText = `I found ${top.length} event${
+            top.length !== 1 ? 's' : ''
+          } for you. Here are a few options.`;
+        }
+      } else {
+        responseText =
+          "I couldn't find any events that match that. Try changing the date, theme, or location in your question.";
+      }
+
       setMessages((prev) => [
         ...prev,
-        { role: 'assistant', text: dummyText, events: randomEvents },
+        { role: 'assistant', text: responseText, events: top },
       ]);
+      setAssistantResponseCount((prev) => prev + 1);
+      setRateLimitStatus(getRateLimitStatus());
+    } catch (error) {
+      const msg =
+        error instanceof Error
+          ? error.message
+          : 'Sorry, I encountered an error processing your request. Please try again.';
+      setMessages((prev) => [...prev, { role: 'assistant', text: msg }]);
+      setAssistantResponseCount((prev) => prev + 1);
+    } finally {
       setIsThinking(false);
       thinkingTimerRef.current = null;
-    }, 1500);
+      setRateLimitStatus(getRateLimitStatus());
+    }
   };
+
+  // When map search submits a query, it sets chatPendingQuery and switches here; we send it (rate limit applies).
+  // Read from store inside effect so we only process once (avoids double-send when effect runs twice e.g. Strict Mode).
+  useEffect(() => {
+    const q = useStore.getState().chatPendingQuery;
+    if (!q) return;
+    setChatPendingQuery(null);
+    void sendMessage(q);
+  }, [chatPendingQuery, setChatPendingQuery, sendMessage]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    sendMessage(inputValue);
+    void sendMessage(inputValue);
   };
 
   const handleSuggestionClick = (label: string) => {
-    sendMessage(label);
+    void sendMessage(label);
   };
 
   const showSuggestions = messages.length === 0;
@@ -121,6 +333,18 @@ export default function MobileChatTab() {
         <p className="mt-2 text-center text-sm text-gray-400">
           lets find you an activity in Toronto!
         </p>
+        <div className="mt-1 flex items-center justify-between w-full text-[11px] text-gray-400">
+          <span>
+            Messages left this window: {rateLimitStatus.remaining} / 4
+          </span>
+          <button
+            type="button"
+            onClick={resetChat}
+            className="text-[11px] font-medium text-gray-500 hover:text-gray-700"
+          >
+            Reset chat
+          </button>
+        </div>
       </header>
 
       <main
@@ -237,7 +461,10 @@ export default function MobileChatTab() {
           aria-label="Search"
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
-          className="h-12 w-full rounded-[1.5rem] bg-white/65 px-5 text-base text-gray-900 placeholder:text-gray-500 shadow-[0_2px_16px_rgba(0,0,0,0.06)] backdrop-blur-2xl backdrop-saturate-150 border border-white/40 focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-white/60"
+          disabled={isSendDisabled}
+          className={`h-12 w-full rounded-[1.5rem] bg-white/65 px-5 text-base text-gray-900 placeholder:text-gray-500 shadow-[0_2px_16px_rgba(0,0,0,0.06)] backdrop-blur-2xl backdrop-saturate-150 border border-white/40 focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-white/60 ${
+            isSendDisabled ? 'opacity-60 cursor-not-allowed' : ''
+          }`}
         />
       </form>
     </div>
