@@ -68,6 +68,8 @@ interface AppState {
   
   selectedEvent: Event | null;
   setSelectedEvent: (event: Event | null) => void;
+  chatEventGroup: Event[];
+  setChatEventGroup: (events: Event[]) => void;
   
   // Mobile search
   mobileSearchOpen: boolean;
@@ -144,6 +146,8 @@ export const useStore = create<AppState>((set, get) => ({
   
   selectedEvent: null,
   setSelectedEvent: (event) => set({ selectedEvent: event }),
+  chatEventGroup: [],
+  setChatEventGroup: (events) => set({ chatEventGroup: events }),
   
   mobileSearchOpen: false,
   setMobileSearchOpen: (open) => set({ mobileSearchOpen: open }),

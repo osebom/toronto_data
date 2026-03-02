@@ -1,7 +1,7 @@
 'use client';
 
 import { format } from 'date-fns';
-import { FiChevronLeft, FiShare2, FiMapPin, FiPhone, FiExternalLink, FiX } from 'react-icons/fi';
+import { FiChevronLeft, FiChevronRight, FiShare2, FiMapPin, FiPhone, FiExternalLink, FiX } from 'react-icons/fi';
 import { useStore } from '@/store/useStore';
 import { Event } from '@/types';
 import { getThemeIcon, getFeatureIcon } from '@/lib/event-metadata';
@@ -12,6 +12,7 @@ export default function MobileEventDetailSheet() {
   const {
     selectedEvent,
     setSelectedEvent,
+    chatEventGroup,
     isMobile,
     mobileSearchContextActive,
     setMobileResultsSheetOpen,
@@ -21,6 +22,10 @@ export default function MobileEventDetailSheet() {
   if (!selectedEvent || !isMobile) return null;
 
   const event = selectedEvent as Event;
+  const group = chatEventGroup || [];
+  const currentIndex = group.findIndex((e) => e.id === event.id);
+  const hasPrev = currentIndex > 0;
+  const hasNext = currentIndex >= 0 && currentIndex < group.length - 1;
   const mapsUrl = event.locationAddress
     ? `https://www.google.com/maps?q=${encodeURIComponent(event.locationAddress)}`
     : `https://www.google.com/maps?q=${event.location.lat},${event.location.lng}`;
@@ -105,6 +110,45 @@ export default function MobileEventDetailSheet() {
           </button>
         )}
       </div>
+
+      {/* Chat group navigation (if opened from chat with multiple events) */}
+      {group.length > 1 && currentIndex !== -1 && (
+        <div className="flex items-center justify-between px-4 pb-2 text-xs text-gray-500 flex-shrink-0">
+          <span>
+            Event {currentIndex + 1} of {group.length}
+          </span>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                if (!hasPrev) return;
+                setSelectedEvent(group[currentIndex - 1]);
+              }}
+              disabled={!hasPrev}
+              className={`h-7 w-7 flex items-center justify-center rounded-full border text-gray-600 bg-white/80 ${
+                !hasPrev ? 'opacity-40 cursor-default' : 'hover:bg-gray-50'
+              }`}
+              aria-label="Previous event"
+            >
+              <FiChevronLeft size={14} />
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (!hasNext) return;
+                setSelectedEvent(group[currentIndex + 1]);
+              }}
+              disabled={!hasNext}
+              className={`h-7 w-7 flex items-center justify-center rounded-full border text-gray-600 bg-white/80 ${
+                !hasNext ? 'opacity-40 cursor-default' : 'hover:bg-gray-50'
+              }`}
+              aria-label="Next event"
+            >
+              <FiChevronRight size={14} />
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="flex-1 overflow-y-auto min-h-0">
         {/* Event icon + name row */}

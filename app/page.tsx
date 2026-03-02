@@ -6,7 +6,6 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import Sidebar from '@/components/desktop/Sidebar';
 import MapView from '@/components/map/MapView';
-import BottomFilters from '@/components/mobile/BottomFilters';
 import SearchBar from '@/components/mobile/SearchBar';
 import MapControls from '@/components/mobile/MapControls';
 import MobileSearchOverlay from '@/components/mobile/MobileSearchOverlay';
@@ -60,7 +59,6 @@ export default function Home() {
             <div className="absolute inset-0">
               <MapView mode={mapMode} />
               <MapControls />
-              <BottomFilters />
               <SearchBar />
               <MobileSearchOverlay />
               <MobileSearchResultsSheet />
