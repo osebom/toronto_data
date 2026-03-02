@@ -1,11 +1,9 @@
 'use client';
 
 import { format } from 'date-fns';
-import { FiChevronLeft, FiShare2, FiMapPin, FiPhone, FiExternalLink, FiX } from 'react-icons/fi';
+import { FiChevronLeft, FiChevronRight, FiShare2, FiMapPin, FiPhone, FiExternalLink, FiX } from 'react-icons/fi';
 import { useStore } from '@/store/useStore';
 import { Event } from '@/types';
-import { calculateDistanceMiles, formatDistance } from '@/lib/utils';
-import { TORONTO_CENTER_LOCATION } from '@/lib/dummy-data';
 import { getThemeIcon, getFeatureIcon } from '@/lib/event-metadata';
 import { getCategoryIcon } from '@/lib/category-icons';
 import { useDraggableSheet } from '@/hooks/useDraggableSheet';
@@ -14,18 +12,20 @@ export default function MobileEventDetailSheet() {
   const {
     selectedEvent,
     setSelectedEvent,
-    userLocation,
+    chatEventGroup,
     isMobile,
     mobileSearchContextActive,
     setMobileResultsSheetOpen,
   } = useStore();
-  const { heightVh, dragHandleProps } = useDraggableSheet(55);
+  const { heightVh, dragHandleProps } = useDraggableSheet(33);
 
   if (!selectedEvent || !isMobile) return null;
 
   const event = selectedEvent as Event;
-  const refLoc = userLocation || TORONTO_CENTER_LOCATION;
-  const distance = calculateDistanceMiles(refLoc, event.location);
+  const group = chatEventGroup || [];
+  const currentIndex = group.findIndex((e) => e.id === event.id);
+  const hasPrev = currentIndex > 0;
+  const hasNext = currentIndex >= 0 && currentIndex < group.length - 1;
   const mapsUrl = event.locationAddress
     ? `https://www.google.com/maps?q=${encodeURIComponent(event.locationAddress)}`
     : `https://www.google.com/maps?q=${event.location.lat},${event.location.lng}`;
@@ -70,7 +70,7 @@ export default function MobileEventDetailSheet() {
 
   return (
     <div
-      className="fixed inset-x-0 bottom-0 z-[1060] bg-white rounded-t-2xl shadow-xl flex flex-col overflow-hidden"
+      className="fixed inset-x-0 bottom-0 z-[1060] rounded-t-2xl flex flex-col overflow-hidden bg-white/65 shadow-[0_2px_16px_rgba(0,0,0,0.06)] backdrop-blur-2xl backdrop-saturate-150 border-2 border-white/70 border-b-0 ring-1 ring-white/30"
       style={{
         height: `${heightVh}vh`,
         maxHeight: '90vh',
@@ -82,7 +82,7 @@ export default function MobileEventDetailSheet() {
         className="flex justify-center pt-3 pb-1 flex-shrink-0 cursor-grab active:cursor-grabbing"
         {...dragHandleProps}
       >
-        <div className="w-10 h-1 rounded-full bg-gray-300" />
+        <div className="w-10 h-1 rounded-full bg-gray-400/80" />
       </div>
 
       {/* Header: Back (from search) or X (from map) */}
@@ -110,6 +110,45 @@ export default function MobileEventDetailSheet() {
           </button>
         )}
       </div>
+
+      {/* Chat group navigation (if opened from chat with multiple events) */}
+      {group.length > 1 && currentIndex !== -1 && (
+        <div className="flex items-center justify-between px-4 pb-2 text-xs text-gray-500 flex-shrink-0">
+          <span>
+            Event {currentIndex + 1} of {group.length}
+          </span>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                if (!hasPrev) return;
+                setSelectedEvent(group[currentIndex - 1]);
+              }}
+              disabled={!hasPrev}
+              className={`h-7 w-7 flex items-center justify-center rounded-full border text-gray-600 bg-white/80 ${
+                !hasPrev ? 'opacity-40 cursor-default' : 'hover:bg-gray-50'
+              }`}
+              aria-label="Previous event"
+            >
+              <FiChevronLeft size={14} />
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (!hasNext) return;
+                setSelectedEvent(group[currentIndex + 1]);
+              }}
+              disabled={!hasNext}
+              className={`h-7 w-7 flex items-center justify-center rounded-full border text-gray-600 bg-white/80 ${
+                !hasNext ? 'opacity-40 cursor-default' : 'hover:bg-gray-50'
+              }`}
+              aria-label="Next event"
+            >
+              <FiChevronRight size={14} />
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="flex-1 overflow-y-auto min-h-0">
         {/* Event icon + name row */}
@@ -217,7 +256,7 @@ export default function MobileEventDetailSheet() {
             className="h-12 flex items-center justify-center gap-2 px-3 rounded-xl bg-gray-900 text-white font-medium hover:bg-gray-800 text-sm whitespace-nowrap"
           >
             <FiMapPin size={18} />
-            directions · {formatDistance(distance)}
+            directions
           </a>
           {event.website && (
             <a

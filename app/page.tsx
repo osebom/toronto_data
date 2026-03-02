@@ -6,16 +6,17 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import Sidebar from '@/components/desktop/Sidebar';
 import MapView from '@/components/map/MapView';
-import BottomFilters from '@/components/mobile/BottomFilters';
 import SearchBar from '@/components/mobile/SearchBar';
 import MapControls from '@/components/mobile/MapControls';
-import MobileSearchOverlay from '@/components/mobile/MobileSearchOverlay';
 import MobileSearchResultsSheet from '@/components/mobile/MobileSearchResultsSheet';
 import MobileEventDetailSheet from '@/components/mobile/MobileEventDetailSheet';
+import MobileTabBar from '@/components/mobile/MobileTabBar';
+import MobileNavigationTab from '@/components/mobile/MobileNavigationTab';
+import MobileChatTab from '@/components/mobile/MobileChatTab';
 import { loadEventsProgressive } from '@/lib/load-events-progressive';
 
 export default function Home() {
-  const { isMobile, setEvents, setIsLoadingEvents, setEventsProgress } = useStore();
+  const { isMobile, mobileTab, setEvents, setIsLoadingEvents, setEventsProgress } = useStore();
   useResponsive();
   useGeolocation(); // Get user's location
 
@@ -50,15 +51,27 @@ export default function Home() {
   return (
     <main className="h-screen w-screen overflow-hidden">
       {isMobile ? (
-        // Mobile Layout - Full screen map with overlays
-        <div className="relative w-full h-full overflow-hidden">
-          <MapView mode={mapMode} />
-          <MapControls />
-          <BottomFilters />
-          <SearchBar />
-          <MobileSearchOverlay />
-          <MobileSearchResultsSheet />
-          <MobileEventDetailSheet />
+        // Mobile Layout - tabbed experience
+        <div className="relative w-full h-full overflow-hidden bg-black">
+          {/* Map tab content */}
+          {mobileTab === 'map' && (
+            <div className="absolute inset-0">
+              <MapView mode={mapMode} />
+              <MapControls />
+              <SearchBar />
+              <MobileSearchResultsSheet />
+              <MobileEventDetailSheet />
+            </div>
+          )}
+
+          {/* Navigation tab */}
+          {mobileTab === 'navigation' && <MobileNavigationTab />}
+
+          {/* Chat tab */}
+          {mobileTab === 'chat' && <MobileChatTab />}
+
+          {/* Persistent bottom nav (hidden on chat page) */}
+          {mobileTab !== 'chat' && <MobileTabBar />}
         </div>
       ) : (
         // Desktop Layout - Full-screen map with sidebar overlay (for liquid blur)

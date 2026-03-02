@@ -6,6 +6,44 @@ import { sampleApiEvents } from '@/lib/sample-events';
 import { calculateDistanceMiles } from '@/lib/utils';
 import { TORONTO_CENTER_LOCATION } from '@/lib/dummy-data';
 
+const CHAT_STORAGE_KEY = 'toronto-chat';
+const CHAT_INACTIVITY_MS = 5 * 60 * 1000;
+const CHAT_MAX_LIFETIME_MS = 10 * 60 * 1000;
+
+type ChatMessage = { role: 'user' | 'assistant'; text: string; events?: Event[] };
+
+function getInitialChatState(): {
+  messages: ChatMessage[];
+  count: number;
+  lastVisited: number | null;
+  sessionStarted: number | null;
+} | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem(CHAT_STORAGE_KEY);
+    if (!raw) return null;
+    const data = JSON.parse(raw) as {
+      messages?: ChatMessage[];
+      count?: number;
+      lastVisited?: number | null;
+      sessionStarted?: number | null;
+    };
+    const now = Date.now();
+    const last = data.lastVisited ?? null;
+    const start = data.sessionStarted ?? null;
+    if (last != null && now - last > CHAT_INACTIVITY_MS) return null;
+    if (start != null && now - start > CHAT_MAX_LIFETIME_MS) return null;
+    return {
+      messages: Array.isArray(data.messages) ? data.messages : [],
+      count: typeof data.count === 'number' ? data.count : 0,
+      lastVisited: last,
+      sessionStarted: start,
+    };
+  } catch {
+    return null;
+  }
+}
+
 interface DateRangeFilter {
   start: string | null;
   end: string | null;
@@ -15,7 +53,11 @@ interface AppState {
   // View mode
   isMobile: boolean;
   setIsMobile: (isMobile: boolean) => void;
-  
+  mobileTab: 'navigation' | 'chat' | 'map';
+  setMobileTab: (tab: 'navigation' | 'chat' | 'map') => void;
+  previousMobileTab: 'navigation' | 'chat' | 'map';
+  setPreviousMobileTab: (tab: 'navigation' | 'chat' | 'map') => void;
+
   // User location
   userLocation: Location | null;
   setUserLocation: (location: Location | null) => void;
@@ -64,7 +106,25 @@ interface AppState {
   
   selectedEvent: Event | null;
   setSelectedEvent: (event: Event | null) => void;
-  
+  chatEventGroup: Event[];
+  setChatEventGroup: (events: Event[]) => void;
+
+  // Mobile chat (persisted across tab switches; cleared after 5 min inactivity)
+  chatMessages: Array<{ role: 'user' | 'assistant'; text: string; events?: Event[] }>;
+  setChatMessages: (
+    messages:
+      | Array<{ role: 'user' | 'assistant'; text: string; events?: Event[] }>
+      | ((prev: Array<{ role: 'user' | 'assistant'; text: string; events?: Event[] }>) => Array<{ role: 'user' | 'assistant'; text: string; events?: Event[] }>)
+  ) => void;
+  chatAssistantResponseCount: number;
+  setChatAssistantResponseCount: (n: number | ((prev: number) => number)) => void;
+  chatLastVisitedAt: number | null;
+  setChatLastVisitedAt: (t: number | null) => void;
+  chatSessionStartedAt: number | null;
+  setChatSessionStartedAt: (t: number | null) => void;
+  chatPendingQuery: string | null;
+  setChatPendingQuery: (q: string | null) => void;
+
   // Mobile search
   mobileSearchOpen: boolean;
   setMobileSearchOpen: (open: boolean) => void;
@@ -92,7 +152,11 @@ interface AppState {
 export const useStore = create<AppState>((set, get) => ({
   isMobile: false,
   setIsMobile: (isMobile) => set({ isMobile }),
-  
+  mobileTab: 'map',
+  setMobileTab: (tab) => set({ mobileTab: tab }),
+  previousMobileTab: 'navigation',
+  setPreviousMobileTab: (tab) => set({ previousMobileTab: tab }),
+
   userLocation: null,
   setUserLocation: (location) => set({ userLocation: location }),
   
@@ -107,7 +171,7 @@ export const useStore = create<AppState>((set, get) => ({
   totalEventsCount: 0,
   setEventsProgress: (loaded, total) => set({ eventsLoadedCount: loaded, totalEventsCount: total }),
   
-  selectedFilter: 'all',
+  selectedFilter: 'this-week',
   setSelectedFilter: (filter) => set({ selectedFilter: filter }),
   
   selectedSort: 'nearest',
@@ -136,7 +200,31 @@ export const useStore = create<AppState>((set, get) => ({
   
   selectedEvent: null,
   setSelectedEvent: (event) => set({ selectedEvent: event }),
-  
+  chatEventGroup: [],
+  setChatEventGroup: (events) => set({ chatEventGroup: events }),
+
+  ...(function () {
+    const initial = getInitialChatState();
+    return {
+      chatMessages: initial?.messages ?? [],
+      chatAssistantResponseCount: initial?.count ?? 0,
+      chatLastVisitedAt: initial?.lastVisited ?? null,
+      chatSessionStartedAt: initial?.sessionStarted ?? null,
+    };
+  })(),
+  setChatMessages: (messages) =>
+    set((state) => ({
+      chatMessages: typeof messages === 'function' ? messages(state.chatMessages) : messages,
+    })),
+  setChatAssistantResponseCount: (n) =>
+    set((state) => ({
+      chatAssistantResponseCount: typeof n === 'function' ? n(state.chatAssistantResponseCount) : n,
+    })),
+  setChatLastVisitedAt: (t) => set({ chatLastVisitedAt: t }),
+  setChatSessionStartedAt: (t) => set({ chatSessionStartedAt: t }),
+  chatPendingQuery: null,
+  setChatPendingQuery: (q) => set({ chatPendingQuery: q }),
+
   mobileSearchOpen: false,
   setMobileSearchOpen: (open) => set({ mobileSearchOpen: open }),
   mobileSearchResults: [],
@@ -209,13 +297,29 @@ export const useStore = create<AppState>((set, get) => ({
     if (startBoundary) startBoundary.setHours(0, 0, 0, 0);
     if (endBoundary) endBoundary.setHours(23, 59, 59, 999);
     
-    // Filter by free/paid status
+    // Filter by this week: events overlapping [today, today+7 days)
+    if (selectedFilter === 'this-week') {
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      const weekEnd = new Date(todayStart);
+      weekEnd.setDate(weekEnd.getDate() + 7);
+      filtered = filtered.filter((event) => {
+        const eventStart = new Date(event.startDate);
+        const eventEnd = new Date(event.endDate);
+        if (Number.isNaN(eventStart.getTime()) || Number.isNaN(eventEnd.getTime())) return false;
+        return eventEnd >= todayStart && eventStart < weekEnd;
+      });
+    }
+
+    // Filter by free/paid status and multi-day
     if (selectedFilter === 'free') {
       filtered = filtered.filter(event => event.isFree);
     } else if (selectedFilter === 'paid') {
       filtered = filtered.filter(event => !event.isFree);
     } else if (selectedFilter === 'accessible') {
       filtered = filtered.filter((event) => event.isAccessible);
+    } else if (selectedFilter === 'multi-day') {
+      filtered = filtered.filter((event) => event.startDate && event.endDate && event.startDate !== event.endDate);
     }
 
     if (selectedThemes.length > 0) {
@@ -272,7 +376,35 @@ export const useStore = create<AppState>((set, get) => ({
     } else if (selectedSort === 'name') {
       filtered.sort((a, b) => a.name.localeCompare(b.name));
     }
-    
+
+    // This Week: show single-day events first, then multi-day (recurring)
+    if (selectedFilter === 'this-week') {
+      const isSingleDay = (e: Event) =>
+        e.startDate === e.endDate || (e.startDate?.slice(0, 10) === e.endDate?.slice(0, 10));
+      const single = filtered.filter(isSingleDay);
+      const multi = filtered.filter((e) => !isSingleDay(e));
+      filtered = [...single, ...multi];
+    }
+
     return filtered;
   },
 }));
+
+if (typeof window !== 'undefined') {
+  useStore.subscribe(() => {
+    const state = useStore.getState();
+    try {
+      localStorage.setItem(
+        CHAT_STORAGE_KEY,
+        JSON.stringify({
+          messages: state.chatMessages,
+          count: state.chatAssistantResponseCount,
+          lastVisited: state.chatLastVisitedAt,
+          sessionStarted: state.chatSessionStartedAt,
+        })
+      );
+    } catch {
+      // ignore storage errors
+    }
+  });
+}

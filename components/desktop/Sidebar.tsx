@@ -565,21 +565,21 @@ export default function Sidebar() {
           </div>
 
           <div className="flex flex-wrap gap-2">
-            {/* Price filter */}
+            {/* Price / type filter */}
             <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-2 py-1.5 text-xs text-white">
-              <span className="text-white/90">Price</span>
-              <div className="flex gap-1">
-                {(['all', 'free', 'paid', 'accessible'] as const).map((option) => (
+              <span className="text-white/90">Filter</span>
+              <div className="flex flex-wrap gap-1">
+                {(['this-week', 'free', 'paid', 'accessible', 'multi-day'] as const).map((option) => (
                   <button
                     key={option}
                     onClick={() => setSelectedFilter(option)}
-                    className={`px-2 py-1 rounded-lg capitalize transition-colors ${
+                    className={`px-2 py-1 rounded-lg transition-colors ${
                       selectedFilter === option
                         ? 'bg-emerald-500 text-white'
                         : 'bg-white/5 text-white hover:bg-white/10'
                     }`}
                   >
-                    {option === 'all' ? 'All' : option}
+                    {option === 'this-week' ? 'This Week' : option === 'multi-day' ? 'Multi-day' : option}
                   </button>
                 ))}
               </div>

@@ -1,11 +1,9 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { FiSearch, FiX } from 'react-icons/fi';
 import { useStore } from '@/store/useStore';
-import { filterEventsWithAIFilters, rankAndLimitEvents, generateEventSummary } from '@/lib/ai-filter-events';
-import { ExtractedFilters } from '@/app/api/ai-search/route';
-import { getRateLimitStatus, recordMessage, formatTimeUntilReset } from '@/lib/rate-limit';
+import { getRateLimitStatus, formatTimeUntilReset } from '@/lib/rate-limit';
 
 const SUGGESTION_CHIPS = [
   { label: 'free events this weekend', emoji: '🎉' },
@@ -20,38 +18,20 @@ const SUGGESTION_CHIPS = [
 
 export default function MobileSearchOverlay() {
   const {
-    events,
-    userLocation,
     mobileSearchOpen,
-    searchQuery,
-    mobileSearchPreviousQuery,
     setMobileSearchOpen,
-    setMobileSearchQuery,
-    setMobileSearchPreviousQuery,
-    setMobileSearchResults,
-    setMobileSearchStatus,
-    setMobileSearchContextActive,
-    setMobileResultsSheetOpen,
-    setMobileResultsTab,
-    setSearchQuery,
+    setMobileTab,
+    setChatMessages,
+    setChatAssistantResponseCount,
+    setChatSessionStartedAt,
+    setChatPendingQuery,
   } = useStore();
 
   const [inputValue, setInputValue] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const availableThemes = useMemo(() => {
-    const set = new Set<string>();
-    events.forEach((e) => e.themes?.forEach((t) => set.add(t)));
-    return Array.from(set);
-  }, [events]);
-
-  const availableCategories = useMemo(() => {
-    const set = new Set<string>();
-    events.forEach((e) => e.categories?.forEach((c) => set.add(c)));
-    return Array.from(set);
-  }, [events]);
-
-  const runSearch = async (query: string) => {
+  /** Launch a new chat on the chat page with this query (resets chat; rate limit still applies when chat sends). */
+  const launchChatWithQuery = (query: string) => {
     const trimmed = query.trim();
     if (!trimmed) return;
 
@@ -60,83 +40,24 @@ export default function MobileSearchOverlay() {
       setErrorMessage(`Rate limit reached. Try again in ${formatTimeUntilReset()}.`);
       return;
     }
-    if (!recordMessage()) {
-      setErrorMessage(`Rate limit reached. Try again in ${formatTimeUntilReset()}.`);
-      return;
-    }
 
     setErrorMessage(null);
-    if (mobileSearchPreviousQuery === null) {
-      setMobileSearchPreviousQuery(searchQuery);
-    }
-    setMobileSearchQuery(trimmed);
-    setSearchQuery(trimmed);
-    setMobileSearchStatus('searching');
-    setMobileSearchContextActive(true);
+    setChatMessages([]);
+    setChatAssistantResponseCount(0);
+    setChatSessionStartedAt(Date.now());
+    setChatPendingQuery(trimmed);
     setMobileSearchOpen(false);
-    setMobileResultsSheetOpen(true);
-    setMobileResultsTab('for-you');
-
-    try {
-      const res = await fetch('/api/ai-search', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          query: trimmed,
-          availableThemes,
-          availableCategories,
-          chatContext: [],
-        }),
-      });
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        if (res.status === 429) {
-          setMobileSearchStatus('error');
-          setErrorMessage(data.message || 'Rate limit reached. Try again later.');
-          return;
-        }
-        throw new Error(data.details || data.error || 'Search failed');
-      }
-
-      const data = (await res.json()) as { filters: ExtractedFilters };
-      const filters = data.filters;
-      const filtered = filterEventsWithAIFilters(events, filters, userLocation);
-      const top = rankAndLimitEvents(filtered, 10, userLocation);
-      setMobileSearchResults(top);
-      setMobileSearchStatus('done');
-
-      if (top.length > 0) {
-        const summaries = top.map(generateEventSummary);
-        const respondRes = await fetch('/api/ai-search/respond', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            query: trimmed,
-            eventSummaries: summaries,
-            count: top.length,
-          }),
-        });
-        if (respondRes.ok) {
-          const { response } = (await respondRes.json()) as { response: string };
-          setErrorMessage(null);
-        }
-      }
-    } catch (err) {
-      setMobileSearchStatus('error');
-      setMobileSearchResults([]);
-      setErrorMessage(err instanceof Error ? err.message : 'Search failed. Try again.');
-    }
+    setMobileTab('chat');
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    runSearch(inputValue);
+    launchChatWithQuery(inputValue);
   };
 
   const handleChipClick = (label: string) => {
     setInputValue(label);
-    runSearch(label);
+    launchChatWithQuery(label);
   };
 
   if (!mobileSearchOpen) return null;

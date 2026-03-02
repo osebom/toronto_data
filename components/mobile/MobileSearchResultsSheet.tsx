@@ -4,8 +4,7 @@ import { FiX } from 'react-icons/fi';
 import { useStore } from '@/store/useStore';
 import { useDraggableSheet } from '@/hooks/useDraggableSheet';
 import { Event } from '@/types';
-import { calculateDistanceMiles, formatDistance } from '@/lib/utils';
-import { TORONTO_CENTER_LOCATION } from '@/lib/dummy-data';
+import { format } from 'date-fns';
 import { getThemeIcon } from '@/lib/event-metadata';
 import { getCategoryIcon } from '@/lib/category-icons';
 import React from 'react';
@@ -16,10 +15,18 @@ interface EventCardProps {
 }
 
 function EventCard({ event, onSelect }: EventCardProps) {
-  const { userLocation } = useStore();
-  const refLoc = userLocation || TORONTO_CENTER_LOCATION;
   const CategoryIcon = getCategoryIcon(event.categories || []);
   const themeEmoji = event.themes?.[0] ? getThemeIcon(event.themes[0]) : null;
+  const formatEventDate = (dateString: string) => {
+    try {
+      return format(new Date(dateString), 'MMM d, yyyy');
+    } catch {
+      return dateString;
+    }
+  };
+  const dateLabel = event.startDate !== event.endDate
+    ? `${formatEventDate(event.startDate)} – ${formatEventDate(event.endDate)}`
+    : formatEventDate(event.startDate);
 
   return (
     <button
@@ -48,7 +55,10 @@ function EventCard({ event, onSelect }: EventCardProps) {
           )}
         </div>
         <div className="text-xs text-gray-400 mt-1">
-          {event.locationName} · {formatDistance(calculateDistanceMiles(refLoc, event.location))}
+          {event.locationName}
+        </div>
+        <div className="text-xs text-gray-400 mt-0.5">
+          {dateLabel}
         </div>
       </div>
       <div className="flex-shrink-0">
@@ -104,7 +114,7 @@ export default function MobileSearchResultsSheet() {
 
   return (
     <div
-      className="fixed inset-x-0 bottom-0 z-[1050] bg-white rounded-t-2xl shadow-xl flex flex-col"
+      className="fixed inset-x-0 bottom-0 z-[1050] rounded-t-2xl flex flex-col bg-white/65 shadow-[0_2px_16px_rgba(0,0,0,0.06)] backdrop-blur-2xl backdrop-saturate-150 border-2 border-white/70 border-b-0 ring-1 ring-white/30"
       style={{
         height: `${heightVh}vh`,
         maxHeight: '85vh',
@@ -116,7 +126,7 @@ export default function MobileSearchResultsSheet() {
         className="flex justify-center pt-3 pb-1 cursor-grab active:cursor-grabbing"
         {...dragHandleProps}
       >
-        <div className="w-10 h-1 rounded-full bg-gray-300" />
+        <div className="w-10 h-1 rounded-full bg-gray-400/80" />
       </div>
 
       {/* Header: filter pill + close */}

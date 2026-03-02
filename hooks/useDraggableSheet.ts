@@ -2,8 +2,8 @@
 
 import { useState, useCallback } from 'react';
 
-const SNAP_POINTS = [35, 55, 85] as const; // vh
-const MIN_VH = 35;
+const SNAP_POINTS = [33, 35, 55, 85] as const; // vh (33 = one third)
+const MIN_VH = 33;
 const MAX_VH = 85;
 
 export function useDraggableSheet(initialVh: number = 55) {
