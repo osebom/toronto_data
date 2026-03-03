@@ -80,12 +80,18 @@ export default function MobileNavigationTab() {
 
   return (
     <div
-      className="fixed inset-0 z-[1020] flex flex-col bg-white"
+      className="fixed inset-0 z-[1020] flex flex-col bg-[#fafafa]"
       style={{
         paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1rem)',
         paddingBottom: 'env(safe-area-inset-bottom, 0px)',
       }}
     >
+      <div
+        className="pointer-events-none absolute inset-0 bg-gradient-to-tl from-emerald-100/40 from-[length:60%] to-transparent"
+        aria-hidden
+      />
+
+      <div className="relative flex flex-col h-full">
       <header className="px-5 pb-3">
         <p className="text-sm font-semibold text-gray-900 mb-3">Discover Toronto events</p>
         <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
@@ -95,10 +101,10 @@ export default function MobileNavigationTab() {
               setSelectedFilter('this-week');
               setSelectedCategories([]);
             }}
-            className={`whitespace-nowrap rounded-full px-3.5 py-1.5 text-xs font-medium ${
+            className={`whitespace-nowrap rounded-full px-3.5 py-1.5 text-xs font-medium border ${
               !activeCategoryId && selectedFilter === 'this-week'
-                ? 'bg-gray-900 text-white'
-                : 'bg-gray-100 text-gray-700'
+                ? 'bg-gray-900 text-white border-gray-900 shadow-sm'
+                : 'bg-white/60 text-gray-700 border-gray-200 backdrop-blur'
             }`}
           >
             This Week
@@ -109,10 +115,10 @@ export default function MobileNavigationTab() {
               setSelectedFilter('free');
               setSelectedCategories([]);
             }}
-            className={`whitespace-nowrap rounded-full px-3.5 py-1.5 text-xs font-medium ${
+            className={`whitespace-nowrap rounded-full px-3.5 py-1.5 text-xs font-medium border ${
               !activeCategoryId && selectedFilter === 'free'
-                ? 'bg-gray-900 text-white'
-                : 'bg-gray-100 text-gray-700'
+                ? 'bg-gray-900 text-white border-gray-900 shadow-sm'
+                : 'bg-white/60 text-gray-700 border-gray-200 backdrop-blur'
             }`}
           >
             Free
@@ -123,10 +129,10 @@ export default function MobileNavigationTab() {
               setSelectedFilter('accessible');
               setSelectedCategories([]);
             }}
-            className={`whitespace-nowrap rounded-full px-3.5 py-1.5 text-xs font-medium ${
+            className={`whitespace-nowrap rounded-full px-3.5 py-1.5 text-xs font-medium border ${
               !activeCategoryId && selectedFilter === 'accessible'
-                ? 'bg-gray-900 text-white'
-                : 'bg-gray-100 text-gray-700'
+                ? 'bg-gray-900 text-white border-gray-900 shadow-sm'
+                : 'bg-white/60 text-gray-700 border-gray-200 backdrop-blur'
             }`}
           >
             Accessible
@@ -137,10 +143,10 @@ export default function MobileNavigationTab() {
               setSelectedFilter('multi-day');
               setSelectedCategories([]);
             }}
-            className={`whitespace-nowrap rounded-full px-3.5 py-1.5 text-xs font-medium ${
+            className={`whitespace-nowrap rounded-full px-3.5 py-1.5 text-xs font-medium border ${
               !activeCategoryId && selectedFilter === 'multi-day'
-                ? 'bg-gray-900 text-white'
-                : 'bg-gray-100 text-gray-700'
+                ? 'bg-gray-900 text-white border-gray-900 shadow-sm'
+                : 'bg-white/60 text-gray-700 border-gray-200 backdrop-blur'
             }`}
           >
             Multi-day
@@ -153,10 +159,10 @@ export default function MobileNavigationTab() {
                 setSelectedFilter('all');
                 setSelectedCategories(filter.categories);
               }}
-              className={`whitespace-nowrap rounded-full px-3.5 py-1.5 text-xs font-medium ${
+              className={`whitespace-nowrap rounded-full px-3.5 py-1.5 text-xs font-medium border ${
                 activeCategoryId === filter.id
-                  ? 'bg-gray-900 text-white'
-                  : 'bg-gray-100 text-gray-700'
+                  ? 'bg-gray-900 text-white border-gray-900 shadow-sm'
+                  : 'bg-white/60 text-gray-700 border-gray-200 backdrop-blur'
               }`}
             >
               {filter.label}
@@ -178,7 +184,7 @@ export default function MobileNavigationTab() {
             return (
               <article
                 key={event.id}
-                className="relative flex h-[170px] flex-col justify-between rounded-3xl bg-white shadow-sm border border-gray-100 px-3 pt-3 pb-4"
+                className="relative flex h-[170px] flex-col justify-between rounded-[22px] bg-white/80 shadow-sm border border-gray-100/80 px-3 pt-3 pb-4 backdrop-blur"
               >
                 <h2
                   className={`${titleSizeClass} font-semibold text-gray-900 line-clamp-2 pr-4`}
@@ -229,6 +235,7 @@ export default function MobileNavigationTab() {
           </div>
         )}
       </main>
+      </div>
     </div>
   );
 }
