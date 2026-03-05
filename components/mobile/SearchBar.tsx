@@ -50,8 +50,8 @@ export default function SearchBar() {
         paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 5.25rem)',
       }}
     >
-      <form onSubmit={handleSubmit} className="relative w-full flex items-center gap-2 bg-gray-900 text-white rounded-xl shadow-lg overflow-hidden">
-        <FiSearch className="ml-3 text-gray-400 flex-shrink-0" size={18} />
+      <form onSubmit={handleSubmit} className="relative w-full flex items-center gap-2 bg-white/90 backdrop-blur-md text-gray-900 rounded-xl shadow-lg border border-white/60 overflow-hidden">
+        <FiSearch className="ml-3 text-emerald-600 flex-shrink-0" size={18} />
         <input
           type="text"
           value={inputValue}
@@ -60,10 +60,10 @@ export default function SearchBar() {
             if (error) setError(null);
           }}
           placeholder="Find events — powered by Cohere"
-          className="flex-1 min-w-0 bg-transparent text-white placeholder-gray-400 px-2 py-3 text-sm focus:outline-none"
+          className="flex-1 min-w-0 bg-transparent text-gray-900 placeholder-gray-500 px-2 py-3 text-sm focus:outline-none"
           autoComplete="off"
         />
-        <span className="flex-shrink-0 flex items-center justify-center w-8 h-8 mr-1 rounded-md bg-white/10 border border-white/15 pointer-events-none">
+        <span className="flex-shrink-0 flex items-center justify-center w-8 h-8 mr-1 rounded-md bg-emerald-50 border border-emerald-100 pointer-events-none">
           <img src="/cohere-logo.png" alt="Cohere" className="h-3.5 w-3.5 opacity-90" />
         </span>
       </form>
