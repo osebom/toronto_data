@@ -12,6 +12,8 @@ export default function MobileNavigationTab() {
     setSelectedFilter,
     selectedCategories,
     setSelectedCategories,
+    setSelectedEvent,
+    setMobileTab,
   } = useStore();
   const events = filteredEvents();
 
@@ -182,15 +184,21 @@ export default function MobileNavigationTab() {
             const compactBubble = isCompactPriceBubble(priceLabel || '');
 
             return (
-              <article
+              <button
+                type="button"
                 key={event.id}
-                className="relative flex h-[170px] flex-col justify-between rounded-[22px] bg-white/80 shadow-sm border border-gray-100/80 px-3 pt-3 pb-4 backdrop-blur"
+                onClick={() => {
+                  setSelectedEvent(event);
+                  setMobileTab('map');
+                }}
+                aria-label={`View ${event.name} on map`}
+                className="relative flex h-[170px] flex-col justify-between rounded-[22px] bg-white/80 shadow-sm border border-gray-100/80 px-3 pt-3 pb-4 backdrop-blur text-left hover:bg-white/90 active:bg-white transition-colors"
               >
-                <h2
-                  className={`${titleSizeClass} font-semibold text-gray-900 line-clamp-2 pr-4`}
+                <span
+                  className={`${titleSizeClass} font-semibold text-gray-900 line-clamp-2 pr-4 block`}
                 >
                   {event.name}
-                </h2>
+                </span>
 
                 <div className="mt-1 space-y-0.5 text-[10px] text-gray-500">
                   <p className="leading-snug line-clamp-1">{event.locationName}</p>
@@ -224,7 +232,7 @@ export default function MobileNavigationTab() {
                     )}
                   </div>
                 </div>
-              </article>
+              </button>
             );
           })}
         </div>
