@@ -1,10 +1,12 @@
 import { create } from 'zustand';
 import { Brand, POI, Event, SortOption, FilterOption, POICategory, Location } from '@/types';
 import { dummyBrands, dummyPOIs } from '@/lib/dummy-data';
-import { parseEvents } from '@/lib/parse-events';
-import { sampleApiEvents } from '@/lib/sample-events';
+import fallbackEventsData from '@/lib/fallback-events.json';
 import { calculateDistanceMiles } from '@/lib/utils';
 import { TORONTO_CENTER_LOCATION } from '@/lib/dummy-data';
+import { DurationFilter, matchesDurationFilter } from '@/lib/event-duration';
+
+const fallbackEvents = fallbackEventsData as unknown as Event[];
 
 const CHAT_STORAGE_KEY = 'toronto-chat';
 const CHAT_INACTIVITY_MS = 5 * 60 * 1000;
@@ -78,7 +80,10 @@ interface AppState {
   // Filters
   selectedFilter: FilterOption;
   setSelectedFilter: (filter: FilterOption) => void;
-  
+
+  durationFilter: DurationFilter;
+  setDurationFilter: (filter: DurationFilter) => void;
+
   selectedSort: SortOption;
   setSelectedSort: (sort: SortOption) => void;
   
@@ -162,7 +167,7 @@ export const useStore = create<AppState>((set, get) => ({
   
   brands: dummyBrands,
   pois: dummyPOIs,
-  events: parseEvents(sampleApiEvents),
+  events: fallbackEvents,
   setEvents: (events) => set({ events }),
   
   isLoadingEvents: false,
@@ -171,8 +176,11 @@ export const useStore = create<AppState>((set, get) => ({
   totalEventsCount: 0,
   setEventsProgress: (loaded, total) => set({ eventsLoadedCount: loaded, totalEventsCount: total }),
   
-  selectedFilter: 'this-week',
+  selectedFilter: 'all',
   setSelectedFilter: (filter) => set({ selectedFilter: filter }),
+
+  durationFilter: 'all',
+  setDurationFilter: (filter) => set({ durationFilter: filter }),
   
   selectedSort: 'nearest',
   setSelectedSort: (sort) => set({ selectedSort: sort }),
@@ -289,8 +297,13 @@ export const useStore = create<AppState>((set, get) => ({
   },
   
   filteredEvents: () => {
-    const { events, searchQuery, selectedFilter, selectedSort, selectedThemes, selectedDateRange, selectedCategories } = get();
+    const { events, searchQuery, selectedFilter, selectedSort, selectedThemes, selectedDateRange, selectedCategories, durationFilter } = get();
     let filtered = [...events];
+
+    // Duration bucket: single-day / weekend / ongoing
+    if (durationFilter !== 'all') {
+      filtered = filtered.filter((event) => matchesDurationFilter(event, durationFilter));
+    }
 
     const startBoundary = selectedDateRange.start ? new Date(selectedDateRange.start) : null;
     const endBoundary = selectedDateRange.end ? new Date(selectedDateRange.end) : null;

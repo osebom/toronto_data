@@ -4,6 +4,11 @@ import { TORONTO_EVENTS_ENDPOINT } from '@/lib/fetch-events';
 import { filterEventsWithinNextMonth } from '@/lib/event-window';
 import { parseEvents } from '@/lib/parse-events';
 import { Event } from '@/types';
+import fallbackEventsData from '@/lib/fallback-events.json';
+
+// Real dataset snapshot, served when the upstream Toronto API is unreachable
+// (e.g. it IP-blocks datacenter hosts like Vercel, returning "Access Denied").
+const fallbackEvents = fallbackEventsData as unknown as Event[];
 
 interface TorontoApiResponse {
   value?: unknown;
@@ -65,7 +70,10 @@ const getCachedEvents = unstable_cache(
         (event) => event.endDate
       );
 
-      return dedupeEventsByName(filteredEvents);
+      const deduped = dedupeEventsByName(filteredEvents);
+
+      // If upstream responded but yielded nothing usable, fall back to the snapshot.
+      return deduped.length > 0 ? deduped : fallbackEvents;
     } catch (error) {
       clearTimeout(timeoutId);
       if (error instanceof Error && error.name === 'AbortError') {
@@ -79,24 +87,21 @@ const getCachedEvents = unstable_cache(
 );
 
 export async function GET() {
+  const origin = process.env.ALLOWED_ORIGIN || '*';
+  const corsHeaders = {
+    'Access-Control-Allow-Origin': origin,
+    'Access-Control-Allow-Methods': 'GET',
+    'Access-Control-Allow-Headers': 'Content-Type',
+  };
+
   try {
     const events = await getCachedEvents();
-    const origin = process.env.ALLOWED_ORIGIN || '*';
-    return NextResponse.json(
-      { events },
-      {
-        headers: {
-          'Access-Control-Allow-Origin': origin,
-          'Access-Control-Allow-Methods': 'GET',
-          'Access-Control-Allow-Headers': 'Content-Type',
-        },
-      }
-    );
+    return NextResponse.json({ events }, { headers: corsHeaders });
   } catch (error) {
-    console.error('Failed to fetch Toronto events:', error);
-    return NextResponse.json(
-      { error: 'Unable to fetch events at this time.' },
-      { status: 500 }
-    );
+    // The upstream Toronto API blocks some hosts (e.g. datacenter IPs on
+    // deployments) with "Access Denied". Rather than failing the whole app,
+    // serve the bundled real-data snapshot so every client sees the same set.
+    console.error('Failed to fetch Toronto events, serving fallback snapshot:', error);
+    return NextResponse.json({ events: fallbackEvents }, { headers: corsHeaders });
   }
 }

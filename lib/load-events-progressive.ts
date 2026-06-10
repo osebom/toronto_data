@@ -1,10 +1,12 @@
 import { Event } from '@/types';
 import { fetchTorontoEvents } from './fetch-events';
 import { getCachedEvents, setCachedEvents } from './indexeddb';
-import { parseEvents } from './parse-events';
-import { sampleApiEvents } from './sample-events';
+import fallbackEventsData from './fallback-events.json';
 
 const INITIAL_LOAD_COUNT = 20;
+
+// Real dataset snapshot used before the network fetch resolves (or if it fails).
+const fallbackEvents = fallbackEventsData as unknown as Event[];
 
 /**
  * Loads events progressively:
@@ -37,10 +39,9 @@ export async function loadEventsProgressive(
       }, 100);
     }
   } else {
-    // No cache, show sample events as fallback
-    const sampleEvents = parseEvents(sampleApiEvents);
-    const initialBatch = sampleEvents.slice(0, INITIAL_LOAD_COUNT);
-    onProgress(initialBatch, initialBatch.length, 0, false);
+    // No cache, show the bundled real-data snapshot as fallback
+    const initialBatch = fallbackEvents.slice(0, INITIAL_LOAD_COUNT);
+    onProgress(initialBatch, initialBatch.length, fallbackEvents.length, false);
   }
   
   // Step 2: Fetch fresh data in background
@@ -80,12 +81,14 @@ export async function loadEventsProgressive(
     
     console.error('Failed to fetch fresh events:', error);
     
-    // If we have cached events, keep showing them
+    // If we have cached events, keep showing them; otherwise fall back to the snapshot.
     if (cachedEvents && Array.isArray(cachedEvents) && cachedEvents.length > 0) {
       const parsedCached = cachedEvents as Event[];
       if (parsedCached.length > 0) {
         onProgress(parsedCached, parsedCached.length, parsedCached.length, true);
       }
+    } else {
+      onProgress(fallbackEvents, fallbackEvents.length, fallbackEvents.length, true);
     }
   }
 }

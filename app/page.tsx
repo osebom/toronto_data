@@ -13,6 +13,7 @@ import MobileEventDetailSheet from '@/components/mobile/MobileEventDetailSheet';
 import MobileTabBar from '@/components/mobile/MobileTabBar';
 import MobileNavigationTab from '@/components/mobile/MobileNavigationTab';
 import MobileChatTab from '@/components/mobile/MobileChatTab';
+import DurationFilter from '@/components/map/DurationFilter';
 import { loadEventsProgressive } from '@/lib/load-events-progressive';
 
 export default function Home() {
@@ -57,6 +58,12 @@ export default function Home() {
           {mobileTab === 'map' && (
             <div className="absolute inset-0">
               <MapView mode={mapMode} />
+              <div
+                className="absolute left-1/2 -translate-x-1/2 z-10 max-w-[calc(100%-2rem)] overflow-x-auto scrollbar-hide"
+                style={{ top: 'calc(env(safe-area-inset-top, 0px) + 1rem)' }}
+              >
+                <DurationFilter variant="light" />
+              </div>
               <MapControls />
               <SearchBar />
               <MobileSearchResultsSheet />
@@ -78,6 +85,9 @@ export default function Home() {
         <div className="relative h-screen w-screen">
           <div className="absolute inset-0">
             <MapView mode={mapMode} />
+          </div>
+          <div className="absolute top-4 right-4 z-10">
+            <DurationFilter variant="light" />
           </div>
           <div className="absolute left-2 top-2 bottom-2 z-10 w-[calc(100%-1rem)] max-w-[420px] lg:w-1/3 lg:max-w-none rounded-3xl overflow-hidden shadow-2xl">
             <Sidebar />
