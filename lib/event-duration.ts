@@ -1,9 +1,25 @@
 import { Event } from '@/types';
 
 export type EventDurationType = 'single' | 'weekend' | 'ongoing';
-export type DurationFilter = 'all' | EventDurationType;
+export type DurationFilter = 'all' | 'today' | EventDurationType;
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+/** True if the event is taking place today (today falls within its date range). */
+export function isHappeningToday(event: Pick<Event, 'startDate' | 'endDate'>): boolean {
+  const start = new Date(event.startDate);
+  const end = new Date(event.endDate);
+
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+    return false;
+  }
+
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const todayEnd = new Date(todayStart.getTime() + MS_PER_DAY - 1);
+
+  return end >= todayStart && start <= todayEnd;
+}
 
 /**
  * Classify an event by how long it runs:
@@ -36,5 +52,6 @@ export function matchesDurationFilter(
   filter: DurationFilter
 ): boolean {
   if (filter === 'all') return true;
+  if (filter === 'today') return isHappeningToday(event);
   return getEventDurationType(event) === filter;
 }

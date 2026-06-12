@@ -5,6 +5,7 @@ import type { DurationFilter as DurationFilterValue } from '@/lib/event-duration
 
 const OPTIONS: Array<{ value: DurationFilterValue; label: string }> = [
   { value: 'all', label: 'All' },
+  { value: 'today', label: 'Today' },
   { value: 'single', label: 'Single day' },
   { value: 'weekend', label: 'Weekend' },
   { value: 'ongoing', label: 'Ongoing' },
